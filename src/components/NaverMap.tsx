@@ -33,29 +33,23 @@ export default function NaverMap({
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    const clientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID;
-
-    if (!clientId || clientId === 'YOUR_NAVER_MAP_CLIENT_ID') {
-      console.warn('Naver Map Client ID is not set');
-      return;
-    }
-
-    if (window.naver?.maps) {
-      setIsLoaded(true);
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${clientId}`;
-    script.async = true;
-    script.onload = () => setIsLoaded(true);
-    document.head.appendChild(script);
-
-    return () => {
-      if (script.parentNode) {
-        script.parentNode.removeChild(script);
+    const checkNaverMaps = () => {
+      if (window.naver?.maps) {
+        setIsLoaded(true);
+        return true;
       }
+      return false;
     };
+
+    if (checkNaverMaps()) return;
+
+    const interval = setInterval(() => {
+      if (checkNaverMaps()) {
+        clearInterval(interval);
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -120,6 +114,16 @@ export default function NaverMap({
           <p className="text-sm text-gray-400">
             .env.local 파일에 NEXT_PUBLIC_NAVER_MAP_CLIENT_ID를 설정해주세요
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isLoaded) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-gray-100">
+        <div className="text-center p-8">
+          <p className="text-gray-600">지도 로딩 중...</p>
         </div>
       </div>
     );

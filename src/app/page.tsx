@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import NaverMap from '@/components/NaverMap';
+import KakaoMap from '@/components/KakaoMap';
 import PlaceDetail from '@/components/PlaceDetail';
 import FilterButtons from '@/components/FilterButtons';
 import { mapApi, placeApi } from '@/services/api';
@@ -48,11 +48,11 @@ export default function Home() {
   return (
     <main className="relative h-screen w-screen overflow-hidden">
       {/* Map */}
-      <NaverMap
+      <KakaoMap
         markers={markers}
         onMarkerClick={handleMarkerClick}
         center={{ lat: 37.5665, lng: 126.978 }}
-        zoom={14}
+        zoom={3}
       />
 
       {/* Header */}
