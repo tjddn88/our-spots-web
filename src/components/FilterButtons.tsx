@@ -1,0 +1,37 @@
+'use client';
+
+import { PlaceType } from '@/types';
+
+interface FilterButtonsProps {
+  selected: PlaceType | null;
+  onChange: (type: PlaceType | null) => void;
+}
+
+const FILTERS: { type: PlaceType | null; label: string; emoji: string }[] = [
+  { type: null, label: '전체', emoji: '📍' },
+  { type: 'RESTAURANT', label: '맛집', emoji: '🍽️' },
+  { type: 'ATTRACTION', label: '명소', emoji: '🏛️' },
+];
+
+export default function FilterButtons({ selected, onChange }: FilterButtonsProps) {
+  return (
+    <div className="flex gap-2">
+      {FILTERS.map(({ type, label, emoji }) => (
+        <button
+          key={type ?? 'all'}
+          onClick={() => onChange(type)}
+          className={`
+            px-4 py-2 rounded-full text-sm font-medium transition-all
+            ${
+              selected === type
+                ? 'bg-gray-900 text-white shadow-lg'
+                : 'bg-white text-gray-700 hover:bg-gray-100 shadow'
+            }
+          `}
+        >
+          {emoji} {label}
+        </button>
+      ))}
+    </div>
+  );
+}
