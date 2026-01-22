@@ -33,6 +33,7 @@ export interface Marker {
   type: PlaceType;
   latitude: number;
   longitude: number;
+  grade?: number;
 }
 
 export interface ApiResponse<T> {
