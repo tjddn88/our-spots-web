@@ -1,4 +1,4 @@
-export type PlaceType = 'RESTAURANT' | 'ATTRACTION';
+export type PlaceType = 'RESTAURANT' | 'KIDS_PLAYGROUND' | 'RELAXATION';
 export type Rating = 'GOOD' | 'AVERAGE' | 'BAD';
 
 export interface Place {
@@ -10,6 +10,7 @@ export interface Place {
   longitude: number;
   description?: string;
   imageUrl?: string;
+  grade?: number;
   createdAt: string;
   updatedAt: string;
 }

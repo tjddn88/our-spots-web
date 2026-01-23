@@ -10,7 +10,8 @@ interface FilterButtonsProps {
 const FILTERS: { type: PlaceType | null; label: string; emoji: string }[] = [
   { type: null, label: '전체', emoji: '📍' },
   { type: 'RESTAURANT', label: '맛집', emoji: '🍽️' },
-  { type: 'ATTRACTION', label: '명소', emoji: '🏛️' },
+  { type: 'KIDS_PLAYGROUND', label: '아이 놀이터', emoji: '🎠' },
+  { type: 'RELAXATION', label: '아빠의 쉼터', emoji: '🛋️' },
 ];
 
 export default function FilterButtons({ selected, onChange }: FilterButtonsProps) {

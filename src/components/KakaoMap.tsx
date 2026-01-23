@@ -20,15 +20,27 @@ interface KakaoMapProps {
 
 const KAKAO_APP_KEY = '0ee6d04f5dfd4574416c359d9ccbda7c';
 
-// 맛집 등급별 색상 (1=빨강, 2=노랑, 3=초록)
-const GRADE_COLORS: Record<number, string> = {
-  1: '#EF4444', // 빨강 - 1등급
-  2: '#F59E0B', // 노랑 - 2등급
-  3: '#22C55E', // 초록 - 3등급
-};
+// 타입별 등급 색상
+const TYPE_GRADE_COLORS = {
+  RESTAURANT: {
+    1: '#DC2626', // 진빨강
+    2: '#F87171', // 빨강
+    3: '#FCA5A5', // 연빨강
+  },
+  KIDS_PLAYGROUND: {
+    1: '#DB2777', // 진분홍
+    2: '#F472B6', // 분홍
+    3: '#FBCFE8', // 연분홍
+  },
+  RELAXATION: {
+    1: '#4F46E5', // 진인디고
+    2: '#818CF8', // 인디고
+    3: '#C7D2FE', // 연인디고
+  },
+} as const;
 
-// 명소 색상
-const ATTRACTION_COLOR = '#6366F1'; // 보라색
+// 기본 색상 (등급 없을 때)
+const DEFAULT_COLOR = '#9CA3AF';
 
 export default function KakaoMap({
   markers,
@@ -157,59 +169,45 @@ export default function KakaoMap({
 
     markers.forEach((markerData) => {
       const position = new window.kakao.maps.LatLng(markerData.latitude, markerData.longitude);
-      const isRestaurant = markerData.type === 'RESTAURANT';
+      const placeType = markerData.type as keyof typeof TYPE_GRADE_COLORS;
 
       // 색상 결정
-      let color: string;
-      if (isRestaurant) {
-        color = markerData.grade ? GRADE_COLORS[markerData.grade] || GRADE_COLORS[3] : GRADE_COLORS[3];
+      const typeColors = TYPE_GRADE_COLORS[placeType];
+      const grade = markerData.grade as 1 | 2 | 3 | undefined;
+      const color = typeColors && grade ? typeColors[grade] : DEFAULT_COLOR;
+
+      // 아이콘 결정
+      let icon: string;
+      if (placeType === 'RESTAURANT') {
+        // 맛집: 포크 & 나이프
+        icon = `<path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/>`;
+      } else if (placeType === 'KIDS_PLAYGROUND') {
+        // 아이 놀이터: 하트
+        icon = `<path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>`;
       } else {
-        color = ATTRACTION_COLOR;
+        // 아빠의 쉼터: 커피잔
+        icon = `<path d="M2 21h18v-2H2v2zm2-4h14V7H4v10zm4-8h6v6H8V9zm8 0h2v6h-2V9zM6 3h12v2H6V3z"/>`;
       }
 
       const content = document.createElement('div');
-
-      if (isRestaurant) {
-        // 맛집: 포크 & 나이프 아이콘
-        content.innerHTML = `
-          <div style="
-            width: 18px;
-            height: 18px;
-            background-color: ${color};
-            border: 2px solid white;
-            border-radius: 50%;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          ">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="white">
-              <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/>
-            </svg>
-          </div>
-        `;
-      } else {
-        // 명소: 카메라 아이콘
-        content.innerHTML = `
-          <div style="
-            width: 18px;
-            height: 18px;
-            background-color: ${color};
-            border: 2px solid white;
-            border-radius: 50%;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          ">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="white">
-              <path d="M12 12c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6-6h-3.17L13 4h-2L9.17 6H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6 12c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"/>
-            </svg>
-          </div>
-        `;
-      }
+      content.innerHTML = `
+        <div style="
+          width: 18px;
+          height: 18px;
+          background-color: ${color};
+          border: 2px solid white;
+          border-radius: 50%;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        ">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="white">
+            ${icon}
+          </svg>
+        </div>
+      `;
       content.style.cursor = 'pointer';
       content.onclick = (e) => {
         e.stopPropagation();

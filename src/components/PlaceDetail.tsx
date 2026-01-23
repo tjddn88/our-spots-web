@@ -17,7 +17,35 @@ const RATING_CONFIG: Record<Rating, { label: string; color: string; emoji: strin
 
 const TYPE_LABELS = {
   RESTAURANT: '맛집',
-  ATTRACTION: '명소',
+  KIDS_PLAYGROUND: '아이 놀이터',
+  RELAXATION: '아빠의 쉼터',
+};
+
+// 타입별 등급 라벨 및 색상
+const GRADE_CONFIG = {
+  RESTAURANT: {
+    1: { label: '🔥 찐맛집', color: 'bg-red-600 text-white' },
+    2: { label: '👌 괜찮은 곳', color: 'bg-red-400 text-white' },
+    3: { label: '🙂 무난한', color: 'bg-red-200 text-red-800' },
+  },
+  KIDS_PLAYGROUND: {
+    1: { label: '⭐ 하민 최애', color: 'bg-pink-600 text-white' },
+    2: { label: '👍 하민 추천', color: 'bg-pink-400 text-white' },
+    3: { label: '🙂 무난한', color: 'bg-pink-200 text-pink-800' },
+  },
+  RELAXATION: {
+    1: { label: '💎 인생 쉼터', color: 'bg-indigo-600 text-white' },
+    2: { label: '👍 괜찮은 쉼터', color: 'bg-indigo-400 text-white' },
+    3: { label: '🙂 무난한', color: 'bg-indigo-200 text-indigo-800' },
+  },
+} as const;
+
+const getGradeLabel = (type: string, grade?: number) => {
+  const config = GRADE_CONFIG[type as keyof typeof GRADE_CONFIG];
+  if (config && grade && config[grade as keyof typeof config]) {
+    return config[grade as keyof typeof config];
+  }
+  return { label: TYPE_LABELS[type as keyof typeof TYPE_LABELS] || '장소', color: 'bg-gray-100 text-gray-800' };
 };
 
 export default function PlaceDetail({ place, isLoading, onClose, position }: PlaceDetailProps) {
@@ -44,8 +72,10 @@ export default function PlaceDetail({ place, isLoading, onClose, position }: Pla
             ) : (
               <>
                 <span className="text-sm font-bold truncate">{place?.name}</span>
-                <span className="text-xs px-1.5 py-0.5 bg-gray-100 rounded-full flex-shrink-0">
-                  {place && TYPE_LABELS[place.type]}
+                <span className={`text-xs px-1.5 py-0.5 rounded-full flex-shrink-0 ${
+                  getGradeLabel(place?.type || '', place?.grade).color
+                }`}>
+                  {getGradeLabel(place?.type || '', place?.grade).label}
                 </span>
               </>
             )}
