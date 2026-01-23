@@ -43,7 +43,7 @@ export default function PlaceForm({ latitude, longitude, initialAddress, initial
         latitude,
         longitude,
         description: description.trim() || undefined,
-        grade: type === 'RESTAURANT' ? grade : undefined,
+        grade,
       });
       onClose();
     } catch (err) {
@@ -81,22 +81,33 @@ export default function PlaceForm({ latitude, longitude, initialAddress, initial
                 onClick={() => setType('RESTAURANT')}
                 className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
                   type === 'RESTAURANT'
-                    ? 'bg-orange-500 text-white'
+                    ? 'bg-red-500 text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                맛집
+                🍽️ 맛집
               </button>
               <button
                 type="button"
-                onClick={() => setType('ATTRACTION')}
+                onClick={() => setType('KIDS_PLAYGROUND')}
                 className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
-                  type === 'ATTRACTION'
+                  type === 'KIDS_PLAYGROUND'
+                    ? 'bg-pink-500 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                🎠 놀이터
+              </button>
+              <button
+                type="button"
+                onClick={() => setType('RELAXATION')}
+                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                  type === 'RELAXATION'
                     ? 'bg-indigo-500 text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                명소
+                🛋️ 쉼터
               </button>
             </div>
           </div>
@@ -127,12 +138,21 @@ export default function PlaceForm({ latitude, longitude, initialAddress, initial
             />
           </div>
 
-          {/* Grade (only for restaurants) */}
-          {type === 'RESTAURANT' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">등급</label>
-              <div className="flex gap-2">
-                {[1, 2, 3].map((g) => (
+          {/* Grade */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">등급</label>
+            <div className="flex gap-2">
+              {[1, 2, 3].map((g) => {
+                const getLabel = () => {
+                  if (type === 'RESTAURANT') {
+                    return g === 1 ? '🔥 찐맛집' : g === 2 ? '👌 괜찮은 곳' : '🙂 무난한';
+                  } else if (type === 'KIDS_PLAYGROUND') {
+                    return g === 1 ? '⭐ 하민 최애' : g === 2 ? '👍 하민 추천' : '🙂 무난한';
+                  } else {
+                    return g === 1 ? '💎 인생 쉼터' : g === 2 ? '👍 괜찮은 쉼터' : '🙂 무난한';
+                  }
+                };
+                return (
                   <button
                     key={g}
                     type="button"
@@ -147,12 +167,12 @@ export default function PlaceForm({ latitude, longitude, initialAddress, initial
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
-                    {g === 1 ? '1등급' : g === 2 ? '2등급' : '3등급'}
+                    {getLabel()}
                   </button>
-                ))}
-              </div>
+                );
+              })}
             </div>
-          )}
+          </div>
 
           {/* Description */}
           <div>
