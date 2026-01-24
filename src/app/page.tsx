@@ -98,10 +98,9 @@ export default function Home() {
     await placeApi.delete(placeId);
     setSelectedPlace(null);
     setPanelPosition(null);
-    // 마커 새로고침
-    const newMarkers = await mapApi.getMarkers(filterType ? { type: filterType } : undefined);
-    setMarkers(newMarkers);
-  }, [filterType]);
+    // 로컬 state에서 마커 제거 (백엔드 캐시 유지)
+    setMarkers(prev => prev.filter(m => m.id !== placeId));
+  }, []);
 
   const handleSearchSelect = useCallback((result: { lat: number; lng: number; address: string; name?: string }) => {
     // 맵 이동
