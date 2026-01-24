@@ -6,6 +6,8 @@ interface PlaceDetailProps {
   place: PlaceDetailType | null;
   isLoading: boolean;
   onClose: () => void;
+  onEdit?: (place: PlaceDetailType) => void;
+  onDelete?: (placeId: number) => void;
   position: { x: number; y: number } | null;
 }
 
@@ -16,9 +18,9 @@ const RATING_CONFIG: Record<Rating, { label: string; color: string; emoji: strin
 };
 
 const TYPE_LABELS = {
-  RESTAURANT: '맛집',
-  KIDS_PLAYGROUND: '아이 놀이터',
-  RELAXATION: '아빠의 쉼터',
+  RESTAURANT: { label: '맛집', emoji: '🍽️', color: 'bg-red-100 text-red-700' },
+  KIDS_PLAYGROUND: { label: '아이 놀이터', emoji: '🎠', color: 'bg-emerald-100 text-emerald-700' },
+  RELAXATION: { label: '아빠의 시간', emoji: '☕', color: 'bg-indigo-100 text-indigo-700' },
 };
 
 // 타입별 등급 라벨 및 색상
@@ -29,13 +31,13 @@ const GRADE_CONFIG = {
     3: { label: '🙂 무난한', color: 'bg-red-200 text-red-800' },
   },
   KIDS_PLAYGROUND: {
-    1: { label: '⭐ 하민 최애', color: 'bg-pink-600 text-white' },
-    2: { label: '👍 하민 추천', color: 'bg-pink-400 text-white' },
-    3: { label: '🙂 무난한', color: 'bg-pink-200 text-pink-800' },
+    1: { label: '⭐ 하민 최애', color: 'bg-emerald-600 text-white' },
+    2: { label: '👍 하민 추천', color: 'bg-emerald-400 text-white' },
+    3: { label: '🙂 무난한', color: 'bg-emerald-200 text-emerald-800' },
   },
   RELAXATION: {
-    1: { label: '💎 인생 쉼터', color: 'bg-indigo-600 text-white' },
-    2: { label: '👍 괜찮은 쉼터', color: 'bg-indigo-400 text-white' },
+    1: { label: '⭐ 소중한 시간', color: 'bg-indigo-600 text-white' },
+    2: { label: '👍 알찬 시간', color: 'bg-indigo-400 text-white' },
     3: { label: '🙂 무난한', color: 'bg-indigo-200 text-indigo-800' },
   },
 } as const;
@@ -45,10 +47,11 @@ const getGradeLabel = (type: string, grade?: number) => {
   if (config && grade && config[grade as keyof typeof config]) {
     return config[grade as keyof typeof config];
   }
-  return { label: TYPE_LABELS[type as keyof typeof TYPE_LABELS] || '장소', color: 'bg-gray-100 text-gray-800' };
+  const typeConfig = TYPE_LABELS[type as keyof typeof TYPE_LABELS];
+  return { label: typeConfig?.label || '장소', color: 'bg-gray-100 text-gray-800' };
 };
 
-export default function PlaceDetail({ place, isLoading, onClose, position }: PlaceDetailProps) {
+export default function PlaceDetail({ place, isLoading, onClose, onEdit, onDelete, position }: PlaceDetailProps) {
   if ((!place && !isLoading) || !position) return null;
 
   // 화면 경계를 벗어나지 않도록 조정
@@ -66,17 +69,24 @@ export default function PlaceDetail({ place, isLoading, onClose, position }: Pla
       <div className="bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-80">
         {/* Header */}
         <div className="flex items-center justify-between p-3 border-b sticky top-0 bg-white">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
+          <div className="flex flex-col gap-1 flex-1 min-w-0">
             {isLoading ? (
               <div className="h-5 w-24 bg-gray-200 animate-pulse rounded" />
             ) : (
               <>
-                <span className="text-sm font-bold truncate">{place?.name}</span>
-                <span className={`text-xs px-1.5 py-0.5 rounded-full flex-shrink-0 ${
-                  getGradeLabel(place?.type || '', place?.grade).color
-                }`}>
-                  {getGradeLabel(place?.type || '', place?.grade).label}
-                </span>
+                <span className="text-sm font-bold">{place?.name}</span>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    TYPE_LABELS[place?.type as keyof typeof TYPE_LABELS]?.color
+                  }`}>
+                    {TYPE_LABELS[place?.type as keyof typeof TYPE_LABELS]?.emoji} {TYPE_LABELS[place?.type as keyof typeof TYPE_LABELS]?.label}
+                  </span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    getGradeLabel(place?.type || '', place?.grade).color
+                  }`}>
+                    {getGradeLabel(place?.type || '', place?.grade).label}
+                  </span>
+                </div>
               </>
             )}
           </div>
@@ -108,6 +118,31 @@ export default function PlaceDetail({ place, isLoading, onClose, position }: Pla
                 </svg>
                 <span>{place.address}</span>
               </div>
+
+              {/* Google Rating */}
+              {place.googleRating && (
+                <a
+                  href={place.googlePlaceId
+                    ? `https://www.google.com/maps/place/?q=place_id:${place.googlePlaceId}`
+                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name + ' ' + place.address)}`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 p-2 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                >
+                  <svg className="w-4 h-4 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                  </svg>
+                  <div className="flex items-center gap-1">
+                    <span className="text-yellow-500 text-sm">★</span>
+                    <span className="text-sm font-semibold text-gray-800">{place.googleRating.toFixed(1)}</span>
+                    {place.googleRatingsTotal && (
+                      <span className="text-xs text-gray-500">({place.googleRatingsTotal.toLocaleString()})</span>
+                    )}
+                  </div>
+                  <span className="text-xs text-blue-600 ml-auto">Google 리뷰 →</span>
+                </a>
+              )}
 
               {/* Description */}
               {place.description && (
@@ -149,6 +184,26 @@ export default function PlaceDetail({ place, isLoading, onClose, position }: Pla
                   아직 등록된 메모가 없습니다
                 </p>
               )}
+
+              {/* Edit/Delete Buttons */}
+              <div className="flex gap-2 pt-2 border-t mt-3">
+                <button
+                  onClick={() => onEdit?.(place)}
+                  className="flex-1 py-1.5 px-3 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                >
+                  수정
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirm('정말 삭제하시겠습니까?')) {
+                      onDelete?.(place.id);
+                    }
+                  }}
+                  className="flex-1 py-1.5 px-3 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                >
+                  삭제
+                </button>
+              </div>
             </div>
           ) : null}
         </div>

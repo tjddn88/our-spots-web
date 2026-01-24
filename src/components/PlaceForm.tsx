@@ -8,6 +8,10 @@ interface PlaceFormProps {
   longitude: number;
   initialAddress?: string;
   initialName?: string;
+  initialType?: PlaceType;
+  initialDescription?: string;
+  initialGrade?: number;
+  isEditMode?: boolean;
   onSubmit: (data: PlaceFormData) => Promise<void>;
   onClose: () => void;
 }
@@ -22,12 +26,12 @@ export interface PlaceFormData {
   grade?: number;
 }
 
-export default function PlaceForm({ latitude, longitude, initialAddress, initialName, onSubmit, onClose }: PlaceFormProps) {
+export default function PlaceForm({ latitude, longitude, initialAddress, initialName, initialType, initialDescription, initialGrade, isEditMode, onSubmit, onClose }: PlaceFormProps) {
   const [name, setName] = useState(initialName || '');
-  const [type, setType] = useState<PlaceType>('RESTAURANT');
+  const [type, setType] = useState<PlaceType>(initialType || 'RESTAURANT');
   const [address, setAddress] = useState(initialAddress || '');
-  const [description, setDescription] = useState('');
-  const [grade, setGrade] = useState<number>(3);
+  const [description, setDescription] = useState(initialDescription || '');
+  const [grade, setGrade] = useState<number>(initialGrade || 3);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -58,7 +62,7 @@ export default function PlaceForm({ latitude, longitude, initialAddress, initial
       <div className="bg-white rounded-xl shadow-2xl w-80 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-bold">장소 추가</h2>
+          <h2 className="text-lg font-bold">{isEditMode ? '장소 수정' : '장소 추가'}</h2>
           <button
             onClick={onClose}
             className="p-1 hover:bg-gray-100 rounded-full transition-colors"
@@ -92,7 +96,7 @@ export default function PlaceForm({ latitude, longitude, initialAddress, initial
                 onClick={() => setType('KIDS_PLAYGROUND')}
                 className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
                   type === 'KIDS_PLAYGROUND'
-                    ? 'bg-pink-500 text-white'
+                    ? 'bg-emerald-500 text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
@@ -107,7 +111,7 @@ export default function PlaceForm({ latitude, longitude, initialAddress, initial
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                🛋️ 쉼터
+                ☕ 아빠시간
               </button>
             </div>
           </div>
@@ -149,7 +153,7 @@ export default function PlaceForm({ latitude, longitude, initialAddress, initial
                   } else if (type === 'KIDS_PLAYGROUND') {
                     return g === 1 ? '⭐ 하민 최애' : g === 2 ? '👍 하민 추천' : '🙂 무난한';
                   } else {
-                    return g === 1 ? '💎 인생 쉼터' : g === 2 ? '👍 괜찮은 쉼터' : '🙂 무난한';
+                    return g === 1 ? '⭐ 소중한 시간' : g === 2 ? '👍 알찬 시간' : '🙂 무난한';
                   }
                 };
                 return (
@@ -197,7 +201,7 @@ export default function PlaceForm({ latitude, longitude, initialAddress, initial
             disabled={isSubmitting || !name.trim() || !address.trim()}
             className="w-full py-2.5 bg-blue-500 text-white rounded-lg font-medium text-sm hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
           >
-            {isSubmitting ? '저장 중...' : '저장'}
+            {isSubmitting ? '저장 중...' : (isEditMode ? '수정' : '저장')}
           </button>
         </form>
       </div>

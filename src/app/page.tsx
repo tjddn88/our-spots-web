@@ -18,6 +18,7 @@ export default function Home() {
   const [panelPosition, setPanelPosition] = useState<{ x: number; y: number } | null>(null);
   const [newPlaceCoords, setNewPlaceCoords] = useState<{ lat: number; lng: number; address?: string; name?: string } | null>(null);
   const [moveTo, setMoveTo] = useState<{ lat: number; lng: number } | null>(null);
+  const [editingPlace, setEditingPlace] = useState<PlaceDetailType | null>(null);
 
   useEffect(() => {
     const fetchMarkers = async () => {
@@ -52,10 +53,17 @@ export default function Home() {
     setPanelPosition(null);
   }, []);
 
-  const handleMapClick = useCallback((latlng: { lat: number; lng: number; address?: string }) => {
+  // TODO: 장소 추가 기능 임시 비활성화 - 나중에 다시 활성화
+  // const handleMapClick = useCallback((latlng: { lat: number; lng: number; address?: string }) => {
+  //   setSelectedPlace(null);
+  //   setPanelPosition(null);
+  //   setNewPlaceCoords(latlng);
+  // }, []);
+
+  const handleMapClick = useCallback(() => {
+    // 맵 클릭 시 상세 패널만 닫기
     setSelectedPlace(null);
     setPanelPosition(null);
-    setNewPlaceCoords(latlng);
   }, []);
 
   const handleCreatePlace = useCallback(async (data: PlaceFormData) => {
@@ -68,7 +76,32 @@ export default function Home() {
 
   const handleCloseForm = useCallback(() => {
     setNewPlaceCoords(null);
+    setEditingPlace(null);
   }, []);
+
+  const handleEditPlace = useCallback((place: PlaceDetailType) => {
+    setEditingPlace(place);
+    setSelectedPlace(null);
+    setPanelPosition(null);
+  }, []);
+
+  const handleUpdatePlace = useCallback(async (data: PlaceFormData) => {
+    if (!editingPlace) return;
+    await placeApi.update(editingPlace.id, data);
+    setEditingPlace(null);
+    // 마커 새로고침
+    const newMarkers = await mapApi.getMarkers(filterType ? { type: filterType } : undefined);
+    setMarkers(newMarkers);
+  }, [editingPlace, filterType]);
+
+  const handleDeletePlace = useCallback(async (placeId: number) => {
+    await placeApi.delete(placeId);
+    setSelectedPlace(null);
+    setPanelPosition(null);
+    // 마커 새로고침
+    const newMarkers = await mapApi.getMarkers(filterType ? { type: filterType } : undefined);
+    setMarkers(newMarkers);
+  }, [filterType]);
 
   const handleSearchSelect = useCallback((result: { lat: number; lng: number; address: string; name?: string }) => {
     // 맵 이동
@@ -97,21 +130,32 @@ export default function Home() {
       />
 
       {/* Header */}
-      <header className="absolute top-0 left-0 right-0 z-10 p-4">
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h1 className="text-xl font-bold text-gray-900 bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-lg">
-              Mr. Seong&apos;s Picks
+      <header className="absolute top-0 left-0 right-0 z-10">
+        {/* Title Bar */}
+        <div className="bg-[#FDFBF7] border-b border-stone-200/60 shadow-sm">
+          <div className="px-4 py-3 flex items-center justify-between">
+            <h1
+              className="text-lg sm:text-xl font-semibold tracking-tight"
+              style={{
+                fontFamily: 'var(--font-noto-serif-kr), serif',
+                color: '#3D3229'
+              }}
+            >
+              하민이네 대동여지도
             </h1>
-            <FilterButtons selected={filterType} onChange={setFilterType} />
           </div>
+        </div>
+
+        {/* Filter & Search */}
+        <div className="bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm px-4 py-2.5 flex flex-col gap-2">
+          <FilterButtons selected={filterType} onChange={setFilterType} />
           <AddressSearch onSelect={handleSearchSelect} />
         </div>
       </header>
 
       {/* Error message */}
       {error && (
-        <div className="absolute top-24 left-1/2 -translate-x-1/2 z-10 bg-red-100 text-red-700 px-4 py-2 rounded-lg shadow-lg text-sm">
+        <div className="absolute top-36 left-1/2 -translate-x-1/2 z-10 bg-red-100 text-red-700 px-4 py-2 rounded-lg shadow-lg text-sm">
           {error}
         </div>
       )}
@@ -121,10 +165,12 @@ export default function Home() {
         place={selectedPlace}
         isLoading={isLoadingPlace}
         onClose={handleCloseDetail}
+        onEdit={handleEditPlace}
+        onDelete={handleDeletePlace}
         position={panelPosition}
       />
 
-      {/* Place Form Modal */}
+      {/* TODO: 장소 추가 기능 임시 비활성화 - 나중에 다시 활성화
       {newPlaceCoords && (
         <PlaceForm
           latitude={newPlaceCoords.lat}
@@ -132,6 +178,22 @@ export default function Home() {
           initialAddress={newPlaceCoords.address}
           initialName={newPlaceCoords.name}
           onSubmit={handleCreatePlace}
+          onClose={handleCloseForm}
+        />
+      )} */}
+
+      {/* Place Form Modal - Edit */}
+      {editingPlace && (
+        <PlaceForm
+          latitude={editingPlace.latitude}
+          longitude={editingPlace.longitude}
+          initialAddress={editingPlace.address}
+          initialName={editingPlace.name}
+          initialType={editingPlace.type}
+          initialDescription={editingPlace.description}
+          initialGrade={editingPlace.grade}
+          isEditMode
+          onSubmit={handleUpdatePlace}
           onClose={handleCloseForm}
         />
       )}

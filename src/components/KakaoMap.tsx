@@ -18,7 +18,7 @@ interface KakaoMapProps {
   moveTo?: { lat: number; lng: number } | null;
 }
 
-const KAKAO_APP_KEY = '0ee6d04f5dfd4574416c359d9ccbda7c';
+const KAKAO_APP_KEY = process.env.NEXT_PUBLIC_KAKAO_MAP_APP_KEY || '';
 
 // 타입별 등급 색상
 const TYPE_GRADE_COLORS = {
@@ -28,9 +28,9 @@ const TYPE_GRADE_COLORS = {
     3: '#FCA5A5', // 연빨강
   },
   KIDS_PLAYGROUND: {
-    1: '#DB2777', // 진분홍
-    2: '#F472B6', // 분홍
-    3: '#FBCFE8', // 연분홍
+    1: '#059669', // 진초록 (에메랄드)
+    2: '#34D399', // 초록
+    3: '#A7F3D0', // 연초록
   },
   RELAXATION: {
     1: '#4F46E5', // 진인디고
@@ -192,20 +192,28 @@ export default function KakaoMap({
       const content = document.createElement('div');
       content.innerHTML = `
         <div style="
-          width: 18px;
-          height: 18px;
-          background-color: ${color};
-          border: 2px solid white;
-          border-radius: 50%;
-          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-          cursor: pointer;
+          width: 44px;
+          height: 44px;
           display: flex;
           align-items: center;
           justify-content: center;
+          cursor: pointer;
         ">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="white">
-            ${icon}
-          </svg>
+          <div style="
+            width: 18px;
+            height: 18px;
+            background-color: ${color};
+            border: 2px solid white;
+            border-radius: 50%;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          ">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="white">
+              ${icon}
+            </svg>
+          </div>
         </div>
       `;
       content.style.cursor = 'pointer';

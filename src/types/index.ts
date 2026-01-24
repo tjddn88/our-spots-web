@@ -11,6 +11,9 @@ export interface Place {
   description?: string;
   imageUrl?: string;
   grade?: number;
+  googlePlaceId?: string;
+  googleRating?: number;
+  googleRatingsTotal?: number;
   createdAt: string;
   updatedAt: string;
 }
