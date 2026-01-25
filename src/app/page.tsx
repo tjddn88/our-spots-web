@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import KakaoMap from '@/components/KakaoMap';
 import PlaceDetail from '@/components/PlaceDetail';
 import PlaceForm, { PlaceFormData } from '@/components/PlaceForm';
@@ -14,6 +14,7 @@ export default function Home() {
   const [selectedPlace, setSelectedPlace] = useState<PlaceDetailType | null>(null);
   const [isLoadingPlace, setIsLoadingPlace] = useState(false);
   const [filterType, setFilterType] = useState<PlaceType | null>(null);
+  const [selectedGrades, setSelectedGrades] = useState<Set<number>>(new Set([1, 2])); // 기본: 최애, 추천
   const [error, setError] = useState<string | null>(null);
   const [panelPosition, setPanelPosition] = useState<{ x: number; y: number } | null>(null);
   const [newPlaceCoords, setNewPlaceCoords] = useState<{ lat: number; lng: number; address?: string; name?: string } | null>(null);
@@ -34,6 +35,13 @@ export default function Home() {
 
     fetchMarkers();
   }, [filterType]);
+
+  // 등급 필터링된 마커
+  const filteredMarkers = useMemo(() => {
+    if (selectedGrades.size === 0) return [];
+    if (selectedGrades.size === 3) return markers;
+    return markers.filter(m => m.grade && selectedGrades.has(m.grade));
+  }, [markers, selectedGrades]);
 
   const handleMarkerClick = useCallback(async (marker: Marker, position: { x: number; y: number }) => {
     setPanelPosition(position);
@@ -148,7 +156,7 @@ export default function Home() {
     <main className="relative h-screen w-screen overflow-hidden">
       {/* Map */}
       <KakaoMap
-        markers={markers}
+        markers={filteredMarkers}
         onMarkerClick={handleMarkerClick}
         onMapClick={handleMapClick}
         center={{ lat: 37.5665, lng: 126.978 }}
@@ -175,7 +183,12 @@ export default function Home() {
 
         {/* Filter & Search */}
         <div className="bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm px-4 py-2.5 flex flex-col gap-2">
-          <FilterButtons selected={filterType} onChange={setFilterType} />
+          <FilterButtons
+            selected={filterType}
+            onChange={setFilterType}
+            selectedGrades={selectedGrades}
+            onGradeChange={setSelectedGrades}
+          />
           <AddressSearch onSelect={handleSearchSelect} />
         </div>
       </header>
