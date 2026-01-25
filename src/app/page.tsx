@@ -120,6 +120,30 @@ export default function Home() {
     setPanelPosition(null);
   }, []);
 
+  const handleMoveToCurrentLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      alert('이 브라우저에서는 위치 서비스를 지원하지 않습니다.');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setMoveTo({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+      },
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) {
+          alert('위치 권한이 거부되었습니다. 브라우저 설정에서 위치 권한을 허용해주세요.');
+        } else {
+          alert('현재 위치를 가져올 수 없습니다.');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }, []);
+
   return (
     <main className="relative h-screen w-screen overflow-hidden">
       {/* Map */}
@@ -201,10 +225,17 @@ export default function Home() {
         />
       )}
 
-      {/* Marker count */}
-      <div className="absolute bottom-4 right-4 z-10 bg-white/90 backdrop-blur px-3 py-1.5 rounded-full shadow text-sm text-gray-600">
-        {markers.length}개 장소
-      </div>
+      {/* Current location button */}
+      <button
+        onClick={handleMoveToCurrentLocation}
+        className="absolute bottom-4 right-4 z-10 bg-white/90 backdrop-blur p-2.5 rounded-full shadow hover:bg-white transition-colors"
+        title="현재 위치로 이동"
+      >
+        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      </button>
     </main>
   );
 }

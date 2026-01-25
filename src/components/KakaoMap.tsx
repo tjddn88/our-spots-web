@@ -117,7 +117,7 @@ export default function KakaoMap({
 
     const moveLatLng = new window.kakao.maps.LatLng(moveTo.lat, moveTo.lng);
     mapInstanceRef.current.setCenter(moveLatLng);
-    mapInstanceRef.current.setLevel(3); // 줌 레벨 3으로 확대
+    mapInstanceRef.current.setLevel(6); // 줌 레벨 6
   }, [mapReady, moveTo]);
 
   // Map click event
