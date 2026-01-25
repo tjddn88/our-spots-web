@@ -169,7 +169,7 @@ export default function Home() {
         position={panelPosition}
       />
 
-      {/* TODO: 장소 추가 기능 임시 비활성화 - 나중에 다시 활성화
+      {/* Place Form Modal - Create (검색 결과 클릭으로만 열림) */}
       {newPlaceCoords && (
         <PlaceForm
           latitude={newPlaceCoords.lat}
@@ -179,7 +179,7 @@ export default function Home() {
           onSubmit={handleCreatePlace}
           onClose={handleCloseForm}
         />
-      )} */}
+      )}
 
       {/* Place Form Modal - Edit */}
       {editingPlace && (

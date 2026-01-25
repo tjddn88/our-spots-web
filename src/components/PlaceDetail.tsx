@@ -124,6 +124,30 @@ export default function PlaceDetail({ place, isLoading, onClose, onEdit, onDelet
                 <p className="text-xs text-gray-700">{place.description}</p>
               )}
 
+              {/* Google Link */}
+              <a
+                href={place.googlePlaceId
+                  ? `https://www.google.com/maps/place/?q=place_id:${place.googlePlaceId}`
+                  : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name + ' ' + place.address)}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 p-2 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+              >
+                <span className="text-sm">🔵</span>
+                <span className="text-xs font-medium text-blue-700">Google</span>
+                {place.googleRating && (
+                  <div className="flex items-center gap-1 ml-1">
+                    <span className="text-yellow-500 text-xs">★</span>
+                    <span className="text-xs font-semibold text-gray-700">{place.googleRating.toFixed(1)}</span>
+                    {place.googleRatingsTotal && (
+                      <span className="text-[10px] text-gray-400">({place.googleRatingsTotal.toLocaleString()})</span>
+                    )}
+                  </div>
+                )}
+                <span className="text-[10px] text-blue-500 ml-auto">리뷰 →</span>
+              </a>
+
               {/* Memos */}
               {place.memos.length > 0 && (
                 <div className="space-y-1.5">
@@ -159,55 +183,6 @@ export default function PlaceDetail({ place, isLoading, onClose, onEdit, onDelet
                   아직 등록된 메모가 없습니다
                 </p>
               )}
-
-              {/* Map Links */}
-              <div className="space-y-1.5">
-                {/* Google */}
-                <a
-                  href={place.googlePlaceId
-                    ? `https://www.google.com/maps/place/?q=place_id:${place.googlePlaceId}`
-                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name + ' ' + place.address)}`
-                  }
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 p-2 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
-                >
-                  <span className="text-sm">🔵</span>
-                  <span className="text-xs font-medium text-blue-700">Google</span>
-                  {place.googleRating && (
-                    <div className="flex items-center gap-1 ml-1">
-                      <span className="text-yellow-500 text-xs">★</span>
-                      <span className="text-xs font-semibold text-gray-700">{place.googleRating.toFixed(1)}</span>
-                      {place.googleRatingsTotal && (
-                        <span className="text-[10px] text-gray-400">({place.googleRatingsTotal.toLocaleString()})</span>
-                      )}
-                    </div>
-                  )}
-                  <span className="text-[10px] text-blue-500 ml-auto">리뷰 →</span>
-                </a>
-
-                {/* Naver + Kakao */}
-                <div className="flex gap-1.5">
-                  <a
-                    href={`https://map.naver.com/v5/search/${encodeURIComponent(place.name + ' ' + place.address)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 flex items-center justify-center gap-1.5 p-2 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
-                  >
-                    <span className="text-sm">🟢</span>
-                    <span className="text-xs font-medium text-green-700">Naver</span>
-                  </a>
-                  <a
-                    href={`https://map.kakao.com/?q=${encodeURIComponent(place.name + ' ' + place.address)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 flex items-center justify-center gap-1.5 p-2 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition-colors"
-                  >
-                    <span className="text-sm">🟡</span>
-                    <span className="text-xs font-medium text-yellow-700">Kakao</span>
-                  </a>
-                </div>
-              </div>
 
               {/* Edit/Delete Buttons */}
               <div className="flex gap-2 pt-2 border-t mt-3">
