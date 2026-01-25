@@ -61,7 +61,7 @@ export default function FilterButtons({ selected, onChange, selectedGrades, onGr
     <div className="flex items-center relative">
       {/* 스크롤 가능한 카테고리 칩 영역 */}
       <div className="flex-1 overflow-x-auto scrollbar-hide">
-        <div className="flex gap-2 pr-24">
+        <div className="flex gap-2 pr-14">
           {FILTERS.map(({ type, label, emoji }) => (
             <button
               key={type ?? 'all'}
@@ -84,33 +84,31 @@ export default function FilterButtons({ selected, onChange, selectedGrades, onGr
       {/* 그라데이션 + 구분선 + 필터 버튼 (우측 고정) */}
       <div className="absolute right-0 flex items-center h-full">
         {/* 그라데이션 페이드 */}
-        <div className="w-10 h-full bg-gradient-to-r from-transparent to-white pointer-events-none" />
+        <div className="w-12 h-full bg-gradient-to-r from-transparent to-white pointer-events-none" />
 
         {/* 구분선 */}
-        <div className="w-px h-5 bg-gray-300 mx-1" />
+        <div className="w-px h-5 bg-gray-300" />
 
         {/* 필터 버튼 */}
-        <div ref={menuRef} className="relative bg-white pl-1">
+        <div ref={menuRef} className="relative bg-white pl-2">
           <button
             onClick={() => setShowGradeMenu(!showGradeMenu)}
             className={`
-              px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap flex-shrink-0 flex items-center gap-1 relative
+              p-2 rounded-full transition-all flex-shrink-0 flex items-center justify-center
               ${showGradeMenu
-                ? 'bg-blue-500 text-white shadow-lg'
-                : isFiltered
-                  ? 'bg-blue-50 text-blue-600 border border-blue-200 shadow'
-                  : 'bg-white text-gray-700 hover:bg-gray-100 shadow border border-gray-200'
+                ? 'bg-gray-100 shadow-lg'
+                : 'bg-white hover:bg-gray-100 shadow border border-gray-200'
               }
             `}
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg
+              className="w-4 h-4"
+              fill={selectedGrades.size < 3 ? '#6B7280' : 'none'}
+              stroke="#6B7280"
+              viewBox="0 0 24 24"
+            >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
             </svg>
-            필터
-            {/* 필터 적용 중 표시 (점) */}
-            {isFiltered && !showGradeMenu && (
-              <span className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full" />
-            )}
           </button>
 
           {/* 드롭다운 메뉴 */}
