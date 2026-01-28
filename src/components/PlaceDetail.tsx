@@ -119,34 +119,43 @@ export default function PlaceDetail({ place, isLoading, onClose, onEdit, onDelet
                 <span>{place.address}</span>
               </div>
 
-              {/* Description */}
-              {place.description && (
-                <p className="text-xs text-gray-700">{place.description}</p>
-              )}
-
-              {/* Google Link */}
-              <a
-                href={place.googlePlaceId
-                  ? `https://www.google.com/maps/place/?q=place_id:${place.googlePlaceId}`
-                  : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name + ' ' + place.address)}`
-                }
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 p-2 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
-              >
-                <span className="text-sm">🔵</span>
-                <span className="text-xs font-medium text-blue-700">Google</span>
-                {place.googleRating && (
-                  <div className="flex items-center gap-1 ml-1">
-                    <span className="text-yellow-500 text-xs">★</span>
-                    <span className="text-xs font-semibold text-gray-700">{place.googleRating.toFixed(1)}</span>
-                    {place.googleRatingsTotal && (
-                      <span className="text-[10px] text-gray-400">({place.googleRatingsTotal.toLocaleString()})</span>
-                    )}
-                  </div>
-                )}
-                <span className="text-[10px] text-blue-500 ml-auto">리뷰 →</span>
-              </a>
+              {/* Review Links */}
+              <div className="rounded-lg border border-gray-200 divide-y divide-gray-200 overflow-hidden">
+                <a
+                  href={place.googlePlaceId
+                    ? `https://www.google.com/maps/place/?q=place_id:${place.googlePlaceId}`
+                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name + ' ' + place.address)}`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 p-2 hover:bg-gray-50 transition-colors"
+                >
+                  <span className="text-sm">🔵</span>
+                  <span className="text-xs font-medium text-blue-700">Google</span>
+                  {place.googleRating && (
+                    <div className="flex items-center gap-1 ml-1">
+                      <span className="text-yellow-500 text-xs">★</span>
+                      <span className="text-xs font-semibold text-gray-700">{place.googleRating.toFixed(1)}</span>
+                      {place.googleRatingsTotal && (
+                        <span className="text-[10px] text-gray-400">({place.googleRatingsTotal.toLocaleString()})</span>
+                      )}
+                    </div>
+                  )}
+                  <span className="text-[10px] text-blue-500 ml-auto">리뷰 →</span>
+                </a>
+                <a
+                  href={`https://search.naver.com/search.naver?query=${encodeURIComponent(
+                    place.address.split(' ').slice(0, 2).join(' ') + ' ' + place.name
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 p-2 hover:bg-gray-50 transition-colors"
+                >
+                  <span className="text-sm">🟢</span>
+                  <span className="text-xs font-medium text-green-700">네이버에서 검색하기</span>
+                  <span className="text-[10px] text-green-500 ml-auto">검색 →</span>
+                </a>
+              </div>
 
               {/* Memos */}
               {place.memos.length > 0 && (
@@ -179,9 +188,15 @@ export default function PlaceDetail({ place, isLoading, onClose, onEdit, onDelet
               )}
 
               {place.memos.length === 0 && (
-                <p className="text-xs text-gray-400 text-center py-2">
-                  아직 등록된 메모가 없습니다
-                </p>
+                place.description ? (
+                  <p className="text-xs text-gray-700 py-2">
+                    {place.description}
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-400 text-center py-2">
+                    아직 등록된 메모가 없습니다
+                  </p>
+                )
               )}
 
               {/* Edit/Delete Buttons */}

@@ -182,7 +182,7 @@ export default function Home() {
         </div>
 
         {/* Filter & Search */}
-        <div className="bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm px-4 py-2.5 flex flex-col gap-2">
+        <div className="bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm px-4 pt-2 pb-2.5 flex flex-col gap-3">
           <FilterButtons
             selected={filterType}
             onChange={setFilterType}

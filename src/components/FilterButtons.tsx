@@ -55,13 +55,13 @@ export default function FilterButtons({ selected, onChange, selectedGrades, onGr
   };
 
   // 필터가 기본값(1,2)이 아닌지 확인
-  const isFiltered = selectedGrades.size !== 2 || !selectedGrades.has(1) || !selectedGrades.has(2);
+  const isFiltered = selectedGrades.size < 3;
 
   return (
     <div className="flex items-center relative">
       {/* 스크롤 가능한 카테고리 칩 영역 */}
       <div className="flex-1 overflow-x-auto scrollbar-hide">
-        <div className="flex gap-2 pr-14">
+        <div className="flex gap-2 pr-14 py-1">
           {FILTERS.map(({ type, label, emoji }) => (
             <button
               key={type ?? 'all'}
@@ -94,7 +94,7 @@ export default function FilterButtons({ selected, onChange, selectedGrades, onGr
           <button
             onClick={() => setShowGradeMenu(!showGradeMenu)}
             className={`
-              p-2 rounded-full transition-all flex-shrink-0 flex items-center justify-center
+              relative p-2 rounded-full transition-all flex-shrink-0 flex items-center justify-center
               ${showGradeMenu
                 ? 'bg-gray-100 shadow-lg'
                 : 'bg-white hover:bg-gray-100 shadow border border-gray-200'
@@ -103,12 +103,15 @@ export default function FilterButtons({ selected, onChange, selectedGrades, onGr
           >
             <svg
               className="w-4 h-4"
-              fill={selectedGrades.size < 3 ? '#6B7280' : 'none'}
+              fill={isFiltered ? '#6B7280' : 'none'}
               stroke="#6B7280"
               viewBox="0 0 24 24"
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
             </svg>
+            {isFiltered && (
+              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white" />
+            )}
           </button>
 
           {/* 드롭다운 메뉴 */}
