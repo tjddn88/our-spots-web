@@ -60,8 +60,8 @@ export default function FilterButtons({ selected, onChange, selectedGrades, onGr
   return (
     <div className="flex items-center relative overflow-hidden">
       {/* 스크롤 가능한 카테고리 칩 영역 */}
-      <div className="flex-1 min-w-0 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        <div className="flex gap-2 pr-14 py-1">
+      <div className="flex-1 min-w-0 overflow-x-scroll touch-pan-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <div className="inline-flex gap-2 pr-14 py-1">
           {FILTERS.map(({ type, label, emoji }) => (
             <button
               key={type ?? 'all'}
