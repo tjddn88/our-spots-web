@@ -83,7 +83,7 @@ export default function PlaceForm({ latitude, longitude, initialAddress, initial
               <button
                 type="button"
                 onClick={() => setType('RESTAURANT')}
-                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
                   type === 'RESTAURANT'
                     ? 'bg-red-500 text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -94,7 +94,7 @@ export default function PlaceForm({ latitude, longitude, initialAddress, initial
               <button
                 type="button"
                 onClick={() => setType('KIDS_PLAYGROUND')}
-                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
                   type === 'KIDS_PLAYGROUND'
                     ? 'bg-emerald-500 text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -105,7 +105,7 @@ export default function PlaceForm({ latitude, longitude, initialAddress, initial
               <button
                 type="button"
                 onClick={() => setType('RELAXATION')}
-                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
                   type === 'RELAXATION'
                     ? 'bg-indigo-500 text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -161,7 +161,7 @@ export default function PlaceForm({ latitude, longitude, initialAddress, initial
                     key={g}
                     type="button"
                     onClick={() => setGrade(g)}
-                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                    className={`flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
                       grade === g
                         ? g === 1
                           ? 'bg-red-500 text-white'
