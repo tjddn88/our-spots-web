@@ -44,17 +44,7 @@ export default function Home() {
   }, [markers, selectedGrades]);
 
   const handleMarkerClick = useCallback(async (marker: Marker, position: { x: number; y: number }) => {
-    // 지도를 마커 위치로 이동 (살짝 위로 오프셋해서 패널 공간 확보)
-    setMoveTo({ lat: marker.latitude - 0.002, lng: marker.longitude });
-
-    // 지도 이동 후 패널 위치는 화면 중앙 기준으로 설정
-    setTimeout(() => {
-      setPanelPosition({
-        x: window.innerWidth / 2,
-        y: window.innerHeight / 3
-      });
-    }, 100);
-
+    setPanelPosition(position);
     setIsLoadingPlace(true);
     try {
       const place = await placeApi.getById(marker.id);

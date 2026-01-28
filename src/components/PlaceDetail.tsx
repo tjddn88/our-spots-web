@@ -54,9 +54,33 @@ const getGradeLabel = (type: string, grade?: number) => {
 export default function PlaceDetail({ place, isLoading, onClose, onEdit, onDelete, position }: PlaceDetailProps) {
   if ((!place && !isLoading) || !position) return null;
 
-  // 화면 경계를 벗어나지 않도록 조정
-  const adjustedX = Math.min(position.x, window.innerWidth - 320);
-  const adjustedY = Math.max(position.y, 80);
+  const panelWidth = 288; // w-72
+  const panelHeight = 320; // max-h-80
+  const headerHeight = 140; // 헤더 + 필터 영역
+  const padding = 16;
+
+  let adjustedX = position.x;
+  let adjustedY = position.y;
+
+  // 우측 경계 체크: 패널이 화면 밖으로 나가면 마커 왼쪽에 표시
+  if (position.x + panelWidth + padding > window.innerWidth) {
+    adjustedX = position.x - panelWidth - 50;
+  }
+
+  // 좌측 경계 체크
+  if (adjustedX < padding) {
+    adjustedX = padding;
+  }
+
+  // 하단 경계 체크: 패널이 화면 밖으로 나가면 위로 표시
+  if (position.y + panelHeight + padding > window.innerHeight) {
+    adjustedY = window.innerHeight - panelHeight - padding;
+  }
+
+  // 상단 경계 체크: 헤더 아래로
+  if (adjustedY < headerHeight) {
+    adjustedY = headerHeight;
+  }
 
   return (
     <div
