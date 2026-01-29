@@ -1,4 +1,4 @@
-import { ApiResponse, Marker, Place, PlaceDetail, Memo, PlaceType } from '@/types';
+import { ApiResponse, Marker, Place, PlaceDetail, PlaceType } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
 
@@ -46,33 +46,6 @@ export const placeApi = {
 
   delete: (id: number, password: string) => {
     return fetchApi<void>(`/api/places/${id}`, {
-      method: 'DELETE',
-      body: JSON.stringify({ password }),
-    });
-  },
-};
-
-export const memoApi = {
-  getByPlace: (placeId: number) => {
-    return fetchApi<Memo[]>(`/api/places/${placeId}/memos`);
-  },
-
-  create: (placeId: number, memo: { itemName: string; rating: string; comment?: string }, password: string) => {
-    return fetchApi<Memo>(`/api/places/${placeId}/memos`, {
-      method: 'POST',
-      body: JSON.stringify({ ...memo, password }),
-    });
-  },
-
-  update: (id: number, memo: Partial<Memo>, password: string) => {
-    return fetchApi<Memo>(`/api/memos/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ ...memo, password }),
-    });
-  },
-
-  delete: (id: number, password: string) => {
-    return fetchApi<void>(`/api/memos/${id}`, {
       method: 'DELETE',
       body: JSON.stringify({ password }),
     });

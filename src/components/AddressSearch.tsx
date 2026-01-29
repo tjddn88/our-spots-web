@@ -82,7 +82,7 @@ export default function AddressSearch({ onSelect }: AddressSearchProps) {
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="주소 또는 장소 검색"
-          className="w-64 px-3 py-1.5 bg-white/90 backdrop-blur border rounded-full text-base shadow focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-64 px-3 py-1.5 bg-white/90 backdrop-blur border rounded-full text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <button
           onClick={handleSearch}

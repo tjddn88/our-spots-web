@@ -6,6 +6,7 @@ import PlaceDetail from '@/components/PlaceDetail';
 import PlaceForm, { PlaceFormData } from '@/components/PlaceForm';
 import FilterButtons from '@/components/FilterButtons';
 import AddressSearch from '@/components/AddressSearch';
+import ShareLinkButton from '@/components/ShareLinkButton';
 import { mapApi, placeApi } from '@/services/api';
 import { Marker, PlaceDetail as PlaceDetailType, PlaceType } from '@/types';
 
@@ -236,17 +237,20 @@ export default function Home() {
         />
       )}
 
-      {/* Current location button */}
-      <button
-        onClick={handleMoveToCurrentLocation}
-        className="absolute bottom-4 right-4 z-10 bg-white/90 backdrop-blur p-2.5 rounded-full shadow hover:bg-white transition-colors"
-        title="현재 위치로 이동"
-      >
-        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-      </button>
+      {/* Floating action buttons - bottom right */}
+      <div className="absolute bottom-4 right-4 z-10 flex flex-col gap-2">
+        <ShareLinkButton />
+        <button
+          onClick={handleMoveToCurrentLocation}
+          className="bg-white/90 backdrop-blur p-2.5 rounded-full shadow-lg hover:bg-white transition-colors"
+          title="현재 위치로 이동"
+        >
+          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </button>
+      </div>
     </main>
   );
 }

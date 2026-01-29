@@ -1,5 +1,4 @@
 export type PlaceType = 'RESTAURANT' | 'KIDS_PLAYGROUND' | 'RELAXATION';
-export type Rating = 'GOOD' | 'AVERAGE' | 'BAD';
 
 export interface Place {
   id: number;
@@ -18,18 +17,7 @@ export interface Place {
   updatedAt: string;
 }
 
-export interface Memo {
-  id: number;
-  placeId: number;
-  itemName: string;
-  rating: Rating;
-  comment?: string;
-  createdAt: string;
-}
-
-export interface PlaceDetail extends Place {
-  memos: Memo[];
-}
+export type PlaceDetail = Place;
 
 export interface Marker {
   id: number;

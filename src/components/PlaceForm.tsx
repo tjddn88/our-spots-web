@@ -55,7 +55,7 @@ export default function PlaceForm({ latitude, longitude, initialAddress, initial
         address: address.trim(),
         latitude,
         longitude,
-        description: description.trim() || undefined,
+        description: description.trim(),
         grade,
         password,
       });

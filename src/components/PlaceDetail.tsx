@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { PlaceDetail as PlaceDetailType, Rating } from '@/types';
+import { PlaceDetail as PlaceDetailType } from '@/types';
 import PasswordModal from './PasswordModal';
 
 interface PlaceDetailProps {
@@ -12,12 +12,6 @@ interface PlaceDetailProps {
   onDelete?: (placeId: number, password: string) => Promise<void>;
   position: { x: number; y: number } | null;
 }
-
-const RATING_CONFIG: Record<Rating, { label: string; color: string; emoji: string }> = {
-  GOOD: { label: '맛있음', color: 'bg-green-100 text-green-800', emoji: '👍' },
-  AVERAGE: { label: '보통', color: 'bg-yellow-100 text-yellow-800', emoji: '😐' },
-  BAD: { label: '별로', color: 'bg-red-100 text-red-800', emoji: '👎' },
-};
 
 const TYPE_LABELS = {
   RESTAURANT: { label: '맛집', emoji: '🍽️', color: 'bg-red-100 text-red-700' },
@@ -201,46 +195,15 @@ export default function PlaceDetail({ place, isLoading, onClose, onEdit, onDelet
                 </a>
               </div>
 
-              {/* Memos */}
-              {place.memos.length > 0 && (
-                <div className="space-y-1.5">
-                  <h3 className="font-semibold text-xs text-gray-900">
-                    {place.type === 'RESTAURANT' ? '메뉴 평가' : '평가'}
-                  </h3>
-                  <div className="space-y-1.5">
-                    {place.memos.map((memo) => {
-                      const ratingConfig = RATING_CONFIG[memo.rating];
-                      return (
-                        <div
-                          key={memo.id}
-                          className="p-2 bg-gray-50 rounded-lg"
-                        >
-                          <div className="flex items-center justify-between mb-0.5">
-                            <span className="font-medium text-xs">{memo.itemName}</span>
-                            <span className={`text-xs px-1.5 py-0.5 rounded-full ${ratingConfig.color}`}>
-                              {ratingConfig.emoji} {ratingConfig.label}
-                            </span>
-                          </div>
-                          {memo.comment && (
-                            <p className="text-xs text-gray-600">{memo.comment}</p>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {place.memos.length === 0 && (
-                place.description ? (
-                  <p className="text-xs text-gray-700 py-2">
-                    {place.description}
-                  </p>
-                ) : (
-                  <p className="text-xs text-gray-400 text-center py-2">
-                    아직 등록된 메모가 없습니다
-                  </p>
-                )
+              {/* Description */}
+              {place.description ? (
+                <p className="text-xs text-gray-700 py-2">
+                  {place.description}
+                </p>
+              ) : (
+                <p className="text-xs text-gray-400 text-center py-2">
+                  등록된 설명이 없습니다
+                </p>
               )}
 
               {/* Edit/Delete Buttons */}
