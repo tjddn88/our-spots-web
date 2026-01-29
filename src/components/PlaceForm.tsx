@@ -136,7 +136,7 @@ export default function PlaceForm({ latitude, longitude, initialAddress, initial
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="장소 이름"
-              className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
@@ -149,7 +149,7 @@ export default function PlaceForm({ latitude, longitude, initialAddress, initial
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               placeholder="주소를 입력하세요"
-              className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
@@ -198,7 +198,7 @@ export default function PlaceForm({ latitude, longitude, initialAddress, initial
               onChange={(e) => setDescription(e.target.value)}
               placeholder="간단한 설명 (선택)"
               rows={2}
-              className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full px-3 py-2 border rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             />
           </div>
 

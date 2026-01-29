@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { Geist, Geist_Mono, Noto_Serif_KR } from "next/font/google";
 import "./globals.css";
@@ -19,10 +19,16 @@ const notoSerifKR = Noto_Serif_KR({
   weight: ["400", "600", "700"],
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
 export const metadata: Metadata = {
   title: "하민이네 대동여지도",
   description: "우리 가족이 함께 만드는 맛집, 놀이터, 추억의 지도",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
 };
 
 export default function RootLayout({

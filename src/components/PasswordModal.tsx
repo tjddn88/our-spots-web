@@ -46,7 +46,7 @@ export default function PasswordModal({
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="비밀번호 입력"
-            className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
+            className="w-full px-3 py-2 border rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
             autoFocus
             disabled={isLoading}
           />
