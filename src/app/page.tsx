@@ -152,7 +152,7 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="relative h-screen w-screen overflow-hidden">
+    <main className="relative h-dvh w-screen overflow-hidden">
       {/* Map */}
       <KakaoMap
         markers={filteredMarkers}
@@ -238,7 +238,7 @@ export default function Home() {
       )}
 
       {/* Floating action buttons - bottom right */}
-      <div className="absolute bottom-4 right-4 z-10 flex flex-col gap-2">
+      <div className="absolute bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] right-4 z-10 flex flex-col gap-2">
         <ShareLinkButton />
         <button
           onClick={handleMoveToCurrentLocation}
