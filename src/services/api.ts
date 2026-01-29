@@ -30,23 +30,24 @@ export const placeApi = {
     return fetchApi<PlaceDetail>(`/api/places/${id}`);
   },
 
-  create: (place: Omit<Place, 'id' | 'createdAt' | 'updatedAt'>) => {
+  create: (place: Omit<Place, 'id' | 'createdAt' | 'updatedAt'>, password: string) => {
     return fetchApi<Place>('/api/places', {
       method: 'POST',
-      body: JSON.stringify(place),
+      body: JSON.stringify({ ...place, password }),
     });
   },
 
-  update: (id: number, place: Partial<Place>) => {
+  update: (id: number, place: Partial<Place>, password: string) => {
     return fetchApi<Place>(`/api/places/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(place),
+      body: JSON.stringify({ ...place, password }),
     });
   },
 
-  delete: (id: number) => {
+  delete: (id: number, password: string) => {
     return fetchApi<void>(`/api/places/${id}`, {
       method: 'DELETE',
+      body: JSON.stringify({ password }),
     });
   },
 };
@@ -56,23 +57,24 @@ export const memoApi = {
     return fetchApi<Memo[]>(`/api/places/${placeId}/memos`);
   },
 
-  create: (placeId: number, memo: { itemName: string; rating: string; comment?: string }) => {
+  create: (placeId: number, memo: { itemName: string; rating: string; comment?: string }, password: string) => {
     return fetchApi<Memo>(`/api/places/${placeId}/memos`, {
       method: 'POST',
-      body: JSON.stringify(memo),
+      body: JSON.stringify({ ...memo, password }),
     });
   },
 
-  update: (id: number, memo: Partial<Memo>) => {
+  update: (id: number, memo: Partial<Memo>, password: string) => {
     return fetchApi<Memo>(`/api/memos/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(memo),
+      body: JSON.stringify({ ...memo, password }),
     });
   },
 
-  delete: (id: number) => {
+  delete: (id: number, password: string) => {
     return fetchApi<void>(`/api/memos/${id}`, {
       method: 'DELETE',
+      body: JSON.stringify({ password }),
     });
   },
 };

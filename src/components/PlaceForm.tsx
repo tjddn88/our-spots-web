@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { PlaceType } from '@/types';
+import PasswordModal from './PasswordModal';
 
 interface PlaceFormProps {
   latitude: number;
@@ -24,6 +25,7 @@ export interface PlaceFormData {
   longitude: number;
   description?: string;
   grade?: number;
+  password: string;
 }
 
 export default function PlaceForm({ latitude, longitude, initialAddress, initialName, initialType, initialDescription, initialGrade, isEditMode, onSubmit, onClose }: PlaceFormProps) {
@@ -32,13 +34,20 @@ export default function PlaceForm({ latitude, longitude, initialAddress, initial
   const [address, setAddress] = useState(initialAddress || '');
   const [description, setDescription] = useState(initialDescription || '');
   const [grade, setGrade] = useState<number>(initialGrade || 3);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | undefined>();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !address.trim()) return;
+    setError(undefined);
+    setShowPasswordModal(true);
+  };
 
+  const handlePasswordConfirm = async (password: string) => {
     setIsSubmitting(true);
+    setError(undefined);
     try {
       await onSubmit({
         name: name.trim(),
@@ -48,10 +57,13 @@ export default function PlaceForm({ latitude, longitude, initialAddress, initial
         longitude,
         description: description.trim() || undefined,
         grade,
+        password,
       });
+      setShowPasswordModal(false);
       onClose();
     } catch (err) {
-      console.error('Failed to create place:', err);
+      console.error('Failed to save place:', err);
+      setError(err instanceof Error ? err.message : '저장에 실패했습니다');
     } finally {
       setIsSubmitting(false);
     }
@@ -100,7 +112,7 @@ export default function PlaceForm({ latitude, longitude, initialAddress, initial
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                🎠 놀이터
+                🎠 아이 놀이터
               </button>
               <button
                 type="button"
@@ -111,7 +123,7 @@ export default function PlaceForm({ latitude, longitude, initialAddress, initial
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                ☕ 아빠시간
+                ☕ 아빠의 시간
               </button>
             </div>
           </div>
@@ -198,13 +210,26 @@ export default function PlaceForm({ latitude, longitude, initialAddress, initial
           {/* Submit */}
           <button
             type="submit"
-            disabled={isSubmitting || !name.trim() || !address.trim()}
+            disabled={!name.trim() || !address.trim()}
             className="w-full py-2.5 bg-blue-500 text-white rounded-lg font-medium text-sm hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
           >
-            {isSubmitting ? '저장 중...' : (isEditMode ? '수정' : '저장')}
+            {isEditMode ? '수정' : '저장'}
           </button>
         </form>
       </div>
+
+      {/* Password Modal */}
+      <PasswordModal
+        isOpen={showPasswordModal}
+        onClose={() => {
+          setShowPasswordModal(false);
+          setError(undefined);
+        }}
+        onConfirm={handlePasswordConfirm}
+        title={isEditMode ? '수정 비밀번호 확인' : '등록 비밀번호 확인'}
+        isLoading={isSubmitting}
+        error={error}
+      />
     </div>
   );
 }

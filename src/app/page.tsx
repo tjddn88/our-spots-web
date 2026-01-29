@@ -75,15 +75,12 @@ export default function Home() {
   }, []);
 
   const handleCreatePlace = useCallback(async (data: PlaceFormData) => {
-    try {
-      await placeApi.create(data);
-      setNewPlaceCoords(null);
-      // 마커 새로고침
-      const newMarkers = await mapApi.getMarkers(filterType ? { type: filterType } : undefined);
-      setMarkers(newMarkers);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : '장소 등록에 실패했습니다.');
-    }
+    const { password, ...placeData } = data;
+    await placeApi.create(placeData, password);
+    setNewPlaceCoords(null);
+    // 마커 새로고침
+    const newMarkers = await mapApi.getMarkers(filterType ? { type: filterType } : undefined);
+    setMarkers(newMarkers);
   }, [filterType]);
 
   const handleCloseForm = useCallback(() => {
@@ -99,15 +96,16 @@ export default function Home() {
 
   const handleUpdatePlace = useCallback(async (data: PlaceFormData) => {
     if (!editingPlace) return;
-    await placeApi.update(editingPlace.id, data);
+    const { password, ...placeData } = data;
+    await placeApi.update(editingPlace.id, placeData, password);
     setEditingPlace(null);
     // 마커 새로고침
     const newMarkers = await mapApi.getMarkers(filterType ? { type: filterType } : undefined);
     setMarkers(newMarkers);
   }, [editingPlace, filterType]);
 
-  const handleDeletePlace = useCallback(async (placeId: number) => {
-    await placeApi.delete(placeId);
+  const handleDeletePlace = useCallback(async (placeId: number, password: string) => {
+    await placeApi.delete(placeId, password);
     setSelectedPlace(null);
     setPanelPosition(null);
     // 로컬 state에서 마커 제거 (백엔드 캐시 유지)
