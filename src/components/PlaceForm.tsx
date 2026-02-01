@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { PlaceType } from '@/types';
-import PasswordModal from './PasswordModal';
 
 interface PlaceFormProps {
   latitude: number;
@@ -13,6 +12,7 @@ interface PlaceFormProps {
   initialDescription?: string;
   initialGrade?: number;
   isEditMode?: boolean;
+  isAuthenticated: boolean;
   onSubmit: (data: PlaceFormData) => Promise<void>;
   onClose: () => void;
 }
@@ -25,29 +25,26 @@ export interface PlaceFormData {
   longitude: number;
   description?: string;
   grade?: number;
-  password: string;
 }
 
-export default function PlaceForm({ latitude, longitude, initialAddress, initialName, initialType, initialDescription, initialGrade, isEditMode, onSubmit, onClose }: PlaceFormProps) {
+export default function PlaceForm({ latitude, longitude, initialAddress, initialName, initialType, initialDescription, initialGrade, isEditMode, isAuthenticated, onSubmit, onClose }: PlaceFormProps) {
   const [name, setName] = useState(initialName || '');
   const [type, setType] = useState<PlaceType>(initialType || 'RESTAURANT');
   const [address, setAddress] = useState(initialAddress || '');
   const [description, setDescription] = useState(initialDescription || '');
   const [grade, setGrade] = useState<number>(initialGrade || 3);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | undefined>();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !address.trim()) return;
+    if (!isAuthenticated) {
+      setError('로그인 후 이용해주세요');
+      return;
+    }
     setError(undefined);
-    setShowPasswordModal(true);
-  };
-
-  const handlePasswordConfirm = async (password: string) => {
     setIsSubmitting(true);
-    setError(undefined);
     try {
       await onSubmit({
         name: name.trim(),
@@ -57,9 +54,7 @@ export default function PlaceForm({ latitude, longitude, initialAddress, initial
         longitude,
         description: description.trim(),
         grade,
-        password,
       });
-      setShowPasswordModal(false);
       onClose();
     } catch (err) {
       console.error('Failed to save place:', err);
@@ -207,29 +202,21 @@ export default function PlaceForm({ latitude, longitude, initialAddress, initial
             좌표: {latitude.toFixed(6)}, {longitude.toFixed(6)}
           </div>
 
+          {/* Error */}
+          {error && (
+            <p className="text-xs text-red-500">{error}</p>
+          )}
+
           {/* Submit */}
           <button
             type="submit"
-            disabled={!name.trim() || !address.trim()}
+            disabled={!name.trim() || !address.trim() || isSubmitting}
             className="w-full py-2.5 bg-blue-500 text-white rounded-lg font-medium text-sm hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
           >
-            {isEditMode ? '수정' : '저장'}
+            {isSubmitting ? '저장 중...' : isEditMode ? '수정' : '저장'}
           </button>
         </form>
       </div>
-
-      {/* Password Modal */}
-      <PasswordModal
-        isOpen={showPasswordModal}
-        onClose={() => {
-          setShowPasswordModal(false);
-          setError(undefined);
-        }}
-        onConfirm={handlePasswordConfirm}
-        title={isEditMode ? '수정 비밀번호 확인' : '등록 비밀번호 확인'}
-        isLoading={isSubmitting}
-        error={error}
-      />
     </div>
   );
 }

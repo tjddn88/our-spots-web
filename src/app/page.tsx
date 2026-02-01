@@ -7,7 +7,8 @@ import PlaceForm, { PlaceFormData } from '@/components/PlaceForm';
 import FilterButtons from '@/components/FilterButtons';
 import AddressSearch from '@/components/AddressSearch';
 import ShareLinkButton from '@/components/ShareLinkButton';
-import { mapApi, placeApi } from '@/services/api';
+import LoginModal from '@/components/LoginModal';
+import { mapApi, placeApi, authApi, isLoggedIn, clearToken } from '@/services/api';
 import { Marker, PlaceDetail as PlaceDetailType, PlaceType } from '@/types';
 
 export default function Home() {
@@ -21,6 +22,22 @@ export default function Home() {
   const [newPlaceCoords, setNewPlaceCoords] = useState<{ lat: number; lng: number; address?: string; name?: string } | null>(null);
   const [moveTo, setMoveTo] = useState<{ lat: number; lng: number } | null>(null);
   const [editingPlace, setEditingPlace] = useState<PlaceDetailType | null>(null);
+
+  // Auth state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginError, setLoginError] = useState<string | undefined>();
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  useEffect(() => {
+    setIsAuthenticated(isLoggedIn());
+
+    const handleAuthExpired = () => {
+      setIsAuthenticated(false);
+    };
+    window.addEventListener('auth-expired', handleAuthExpired);
+    return () => window.removeEventListener('auth-expired', handleAuthExpired);
+  }, []);
 
   useEffect(() => {
     const fetchMarkers = async () => {
@@ -62,13 +79,6 @@ export default function Home() {
     setPanelPosition(null);
   }, []);
 
-  // TODO: 장소 추가 기능 임시 비활성화 - 나중에 다시 활성화
-  // const handleMapClick = useCallback((latlng: { lat: number; lng: number; address?: string }) => {
-  //   setSelectedPlace(null);
-  //   setPanelPosition(null);
-  //   setNewPlaceCoords(latlng);
-  // }, []);
-
   const handleMapClick = useCallback(() => {
     // 맵 클릭 시 상세 패널만 닫기
     setSelectedPlace(null);
@@ -76,8 +86,7 @@ export default function Home() {
   }, []);
 
   const handleCreatePlace = useCallback(async (data: PlaceFormData) => {
-    const { password, ...placeData } = data;
-    await placeApi.create(placeData, password);
+    await placeApi.create(data);
     setNewPlaceCoords(null);
     // 마커 새로고침
     const newMarkers = await mapApi.getMarkers(filterType ? { type: filterType } : undefined);
@@ -97,16 +106,15 @@ export default function Home() {
 
   const handleUpdatePlace = useCallback(async (data: PlaceFormData) => {
     if (!editingPlace) return;
-    const { password, ...placeData } = data;
-    await placeApi.update(editingPlace.id, placeData, password);
+    await placeApi.update(editingPlace.id, data);
     setEditingPlace(null);
     // 마커 새로고침
     const newMarkers = await mapApi.getMarkers(filterType ? { type: filterType } : undefined);
     setMarkers(newMarkers);
   }, [editingPlace, filterType]);
 
-  const handleDeletePlace = useCallback(async (placeId: number, password: string) => {
-    await placeApi.delete(placeId, password);
+  const handleDeletePlace = useCallback(async (placeId: number) => {
+    await placeApi.delete(placeId);
     setSelectedPlace(null);
     setPanelPosition(null);
     // 로컬 state에서 마커 제거 (백엔드 캐시 유지)
@@ -149,6 +157,25 @@ export default function Home() {
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
+  }, []);
+
+  const handleLogin = useCallback(async (password: string) => {
+    setIsLoggingIn(true);
+    setLoginError(undefined);
+    try {
+      await authApi.login(password);
+      setIsAuthenticated(true);
+      setShowLoginModal(false);
+    } catch (err) {
+      setLoginError(err instanceof Error ? err.message : '로그인에 실패했습니다');
+    } finally {
+      setIsLoggingIn(false);
+    }
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    authApi.logout();
+    setIsAuthenticated(false);
   }, []);
 
   return (
@@ -207,6 +234,7 @@ export default function Home() {
         onEdit={handleEditPlace}
         onDelete={handleDeletePlace}
         position={panelPosition}
+        isAuthenticated={isAuthenticated}
       />
 
       {/* Place Form Modal - Create (검색 결과 클릭으로만 열림) */}
@@ -216,6 +244,7 @@ export default function Home() {
           longitude={newPlaceCoords.lng}
           initialAddress={newPlaceCoords.address}
           initialName={newPlaceCoords.name}
+          isAuthenticated={isAuthenticated}
           onSubmit={handleCreatePlace}
           onClose={handleCloseForm}
         />
@@ -232,6 +261,7 @@ export default function Home() {
           initialDescription={editingPlace.description}
           initialGrade={editingPlace.grade}
           isEditMode
+          isAuthenticated={isAuthenticated}
           onSubmit={handleUpdatePlace}
           onClose={handleCloseForm}
         />
@@ -239,7 +269,6 @@ export default function Home() {
 
       {/* Floating action buttons - bottom right */}
       <div className="absolute bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] right-4 z-10 flex flex-col gap-2">
-        <ShareLinkButton />
         <button
           onClick={handleMoveToCurrentLocation}
           className="bg-white/90 backdrop-blur p-2.5 rounded-full shadow-lg hover:bg-white transition-colors"
@@ -250,7 +279,37 @@ export default function Home() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
         </button>
+        <ShareLinkButton />
+        {/* Login/Logout Button */}
+        <button
+          onClick={isAuthenticated ? handleLogout : () => { setLoginError(undefined); setShowLoginModal(true); }}
+          className={`backdrop-blur p-2.5 rounded-full shadow-lg transition-colors ${
+            isAuthenticated
+              ? 'bg-green-100/90 hover:bg-green-200'
+              : 'bg-white/90 hover:bg-white'
+          }`}
+          title={isAuthenticated ? '로그아웃' : '관리자 로그인'}
+        >
+          {isAuthenticated ? (
+            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+            </svg>
+          ) : (
+            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          )}
+        </button>
       </div>
+
+      {/* Login Modal */}
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onConfirm={handleLogin}
+        isLoading={isLoggingIn}
+        error={loginError}
+      />
     </main>
   );
 }

@@ -2,15 +2,15 @@
 
 import { useState } from 'react';
 import { PlaceDetail as PlaceDetailType } from '@/types';
-import PasswordModal from './PasswordModal';
 
 interface PlaceDetailProps {
   place: PlaceDetailType | null;
   isLoading: boolean;
   onClose: () => void;
   onEdit?: (place: PlaceDetailType) => void;
-  onDelete?: (placeId: number, password: string) => Promise<void>;
+  onDelete?: (placeId: number) => Promise<void>;
   position: { x: number; y: number } | null;
+  isAuthenticated: boolean;
 }
 
 const TYPE_LABELS = {
@@ -47,20 +47,26 @@ const getGradeLabel = (type: string, grade?: number) => {
   return { label: typeConfig?.label || '장소', color: 'bg-gray-100 text-gray-800' };
 };
 
-export default function PlaceDetail({ place, isLoading, onClose, onEdit, onDelete, position }: PlaceDetailProps) {
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+export default function PlaceDetail({ place, isLoading, onClose, onEdit, onDelete, position, isAuthenticated }: PlaceDetailProps) {
   const [isDeleting, setIsDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | undefined>();
 
-  const handleDeleteConfirm = async (password: string) => {
+  const handleEdit = () => {
     if (!place) return;
+    onEdit?.(place);
+  };
+
+  const handleDelete = async () => {
+    if (!place) return;
+    if (!isAuthenticated) {
+      alert('로그인 후 이용해주세요');
+      return;
+    }
+    if (!window.confirm(`"${place.name}" 장소를 삭제하시겠습니까?`)) return;
     setIsDeleting(true);
-    setDeleteError(undefined);
     try {
-      await onDelete?.(place.id, password);
-      setShowDeleteModal(false);
+      await onDelete?.(place.id);
     } catch (err) {
-      setDeleteError(err instanceof Error ? err.message : '삭제에 실패했습니다');
+      alert(err instanceof Error ? err.message : '삭제에 실패했습니다');
     } finally {
       setIsDeleting(false);
     }
@@ -209,38 +215,23 @@ export default function PlaceDetail({ place, isLoading, onClose, onEdit, onDelet
               {/* Edit/Delete Buttons */}
               <div className="flex gap-2 pt-2 border-t mt-3">
                 <button
-                  onClick={() => onEdit?.(place)}
+                  onClick={handleEdit}
                   className="flex-1 py-1.5 px-3 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
                 >
                   수정
                 </button>
                 <button
-                  onClick={() => {
-                    setDeleteError(undefined);
-                    setShowDeleteModal(true);
-                  }}
-                  className="flex-1 py-1.5 px-3 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="flex-1 py-1.5 px-3 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors disabled:opacity-50"
                 >
-                  삭제
+                  {isDeleting ? '삭제 중...' : '삭제'}
                 </button>
               </div>
             </div>
           ) : null}
         </div>
       </div>
-
-      {/* Delete Password Modal */}
-      <PasswordModal
-        isOpen={showDeleteModal}
-        onClose={() => {
-          setShowDeleteModal(false);
-          setDeleteError(undefined);
-        }}
-        onConfirm={handleDeleteConfirm}
-        title="삭제 비밀번호 확인"
-        isLoading={isDeleting}
-        error={deleteError}
-      />
     </div>
   );
 }

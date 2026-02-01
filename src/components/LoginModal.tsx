@@ -1,25 +1,29 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
-interface PasswordModalProps {
+interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (password: string) => void;
-  title?: string;
   isLoading?: boolean;
   error?: string;
 }
 
-export default function PasswordModal({
+export default function LoginModal({
   isOpen,
   onClose,
   onConfirm,
-  title = '비밀번호 확인',
   isLoading = false,
   error
-}: PasswordModalProps) {
+}: LoginModalProps) {
   const [password, setPassword] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      setPassword('');
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -38,7 +42,7 @@ export default function PasswordModal({
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
       <div className="bg-white rounded-xl shadow-2xl w-72 p-4">
-        <h3 className="text-lg font-bold mb-4">{title}</h3>
+        <h3 className="text-lg font-bold mb-4">관리자 로그인</h3>
 
         <form onSubmit={handleSubmit}>
           <input
@@ -69,7 +73,7 @@ export default function PasswordModal({
               disabled={isLoading || !password.trim()}
               className="flex-1 py-2 px-3 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
-              {isLoading ? '확인 중...' : '확인'}
+              {isLoading ? '로그인 중...' : '로그인'}
             </button>
           </div>
         </form>
