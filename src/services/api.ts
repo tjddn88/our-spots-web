@@ -125,4 +125,10 @@ export const mapApi = {
     const query = searchParams.toString();
     return fetchApi<Marker[]>(`/api/map/markers${query ? `?${query}` : ''}`);
   },
+
+  refreshMarkers: () => {
+    return fetchApi<Marker[]>('/api/map/markers/refresh', {
+      method: 'POST',
+    });
+  },
 };

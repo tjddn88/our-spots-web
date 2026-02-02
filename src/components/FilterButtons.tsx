@@ -4,17 +4,24 @@ import { useState, useRef, useEffect } from 'react';
 import { PlaceType } from '@/types';
 
 interface FilterButtonsProps {
-  selected: PlaceType | null;
-  onChange: (type: PlaceType | null) => void;
+  selectedTypes: Set<PlaceType>;
+  onTypeToggle: (type: PlaceType | null) => void;
   selectedGrades: Set<number>;
   onGradeChange: (grades: Set<number>) => void;
+  isAuthenticated: boolean;
 }
 
-const FILTERS: { type: PlaceType | null; label: string; emoji: string }[] = [
+const PUBLIC_FILTERS: { type: PlaceType | null; label: string; emoji: string }[] = [
   { type: null, label: '전체', emoji: '📍' },
   { type: 'RESTAURANT', label: '맛집', emoji: '🍽️' },
   { type: 'KIDS_PLAYGROUND', label: '아이 놀이터', emoji: '🎠' },
   { type: 'RELAXATION', label: '아빠의 시간', emoji: '☕' },
+];
+
+const PERSONAL_FILTERS: { type: PlaceType; label: string; emoji: string }[] = [
+  { type: 'MY_FOOTPRINT', label: '나의 발자취', emoji: '👣' },
+  { type: 'RECOMMENDED_RESTAURANT', label: '추천 맛집', emoji: '🍴' },
+  { type: 'RECOMMENDED_SPOT', label: '추천 명소', emoji: '🏛️' },
 ];
 
 const GRADES = [
@@ -23,9 +30,14 @@ const GRADES = [
   { grade: 3, label: '무난' },
 ];
 
-export default function FilterButtons({ selected, onChange, selectedGrades, onGradeChange }: FilterButtonsProps) {
+const PUBLIC_TYPES: PlaceType[] = ['RESTAURANT', 'KIDS_PLAYGROUND', 'RELAXATION'];
+const PERSONAL_TYPES: PlaceType[] = ['MY_FOOTPRINT', 'RECOMMENDED_RESTAURANT', 'RECOMMENDED_SPOT'];
+
+export default function FilterButtons({ selectedTypes, onTypeToggle, selectedGrades, onGradeChange, isAuthenticated }: FilterButtonsProps) {
   const [showGradeMenu, setShowGradeMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const isAllPublicSelected = PUBLIC_TYPES.every(t => selectedTypes.has(t));
 
   // 외부 클릭 시 메뉴 닫기
   useEffect(() => {
@@ -62,14 +74,27 @@ export default function FilterButtons({ selected, onChange, selectedGrades, onGr
       {/* 스크롤 가능한 카테고리 칩 영역 */}
       <div className="flex-1 min-w-0 overflow-x-scroll touch-pan-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <div className="inline-flex gap-2 pr-14 py-1">
-          {FILTERS.map(({ type, label, emoji }) => (
+          <button
+            onClick={() => onTypeToggle(null)}
+            className={`
+              px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap flex-shrink-0
+              ${
+                isAllPublicSelected
+                  ? 'bg-gray-900 text-white shadow-lg'
+                  : 'bg-white text-gray-700 hover:bg-gray-100 shadow'
+              }
+            `}
+          >
+            📍 전체
+          </button>
+          {PUBLIC_FILTERS.filter(f => f.type !== null).map(({ type, label, emoji }) => (
             <button
-              key={type ?? 'all'}
-              onClick={() => onChange(type)}
+              key={type!}
+              onClick={() => onTypeToggle(type)}
               className={`
                 px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap flex-shrink-0
                 ${
-                  selected === type
+                  !isAllPublicSelected && selectedTypes.has(type!)
                     ? 'bg-gray-900 text-white shadow-lg'
                     : 'bg-white text-gray-700 hover:bg-gray-100 shadow'
                 }
@@ -78,6 +103,27 @@ export default function FilterButtons({ selected, onChange, selectedGrades, onGr
               {emoji} {label}
             </button>
           ))}
+          {isAuthenticated && (
+            <>
+              <span className="flex items-center text-gray-300 flex-shrink-0">·</span>
+              {PERSONAL_FILTERS.map(({ type, label, emoji }) => (
+                <button
+                  key={type}
+                  onClick={() => onTypeToggle(type)}
+                  className={`
+                    px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap flex-shrink-0
+                    ${
+                      selectedTypes.has(type)
+                        ? 'bg-gray-900 text-white shadow-lg'
+                        : 'bg-white text-gray-700 hover:bg-gray-100 shadow'
+                    }
+                  `}
+                >
+                  {emoji} {label}
+                </button>
+              ))}
+            </>
+          )}
         </div>
       </div>
 

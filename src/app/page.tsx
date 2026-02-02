@@ -11,11 +11,14 @@ import LoginModal from '@/components/LoginModal';
 import { mapApi, placeApi, authApi, isLoggedIn, clearToken } from '@/services/api';
 import { Marker, PlaceDetail as PlaceDetailType, PlaceType } from '@/types';
 
+const PUBLIC_TYPES: PlaceType[] = ['RESTAURANT', 'KIDS_PLAYGROUND', 'RELAXATION'];
+const PERSONAL_TYPES: PlaceType[] = ['MY_FOOTPRINT', 'RECOMMENDED_RESTAURANT', 'RECOMMENDED_SPOT'];
+
 export default function Home() {
   const [markers, setMarkers] = useState<Marker[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<PlaceDetailType | null>(null);
   const [isLoadingPlace, setIsLoadingPlace] = useState(false);
-  const [filterType, setFilterType] = useState<PlaceType | null>(null);
+  const [selectedTypes, setSelectedTypes] = useState<Set<PlaceType>>(new Set(PUBLIC_TYPES));
   const [selectedGrades, setSelectedGrades] = useState<Set<number>>(new Set([1, 2])); // 기본: 최애, 추천
   const [error, setError] = useState<string | null>(null);
   const [panelPosition, setPanelPosition] = useState<{ x: number; y: number } | null>(null);
@@ -42,7 +45,7 @@ export default function Home() {
   useEffect(() => {
     const fetchMarkers = async () => {
       try {
-        const data = await mapApi.getMarkers(filterType ? { type: filterType } : undefined);
+        const data = await mapApi.getMarkers();
         setMarkers(data);
         setError(null);
       } catch (err) {
@@ -52,14 +55,19 @@ export default function Home() {
     };
 
     fetchMarkers();
-  }, [filterType]);
+  }, []);
 
-  // 등급 필터링된 마커
+  // 타입 + 등급 필터링된 마커 (비로그인 시 개인 카테고리 숨김)
   const filteredMarkers = useMemo(() => {
+    let result = markers;
+    if (!isAuthenticated) {
+      result = result.filter(m => !PERSONAL_TYPES.includes(m.type));
+    }
+    result = result.filter(m => selectedTypes.has(m.type));
     if (selectedGrades.size === 0) return [];
-    if (selectedGrades.size === 3) return markers;
-    return markers.filter(m => m.grade && selectedGrades.has(m.grade));
-  }, [markers, selectedGrades]);
+    if (selectedGrades.size === 3) return result;
+    return result.filter(m => m.grade && selectedGrades.has(m.grade));
+  }, [markers, selectedTypes, selectedGrades, isAuthenticated]);
 
   const handleMarkerClick = useCallback(async (marker: Marker, position: { x: number; y: number }) => {
     setPanelPosition(position);
@@ -88,10 +96,10 @@ export default function Home() {
   const handleCreatePlace = useCallback(async (data: PlaceFormData) => {
     await placeApi.create(data);
     setNewPlaceCoords(null);
-    // 마커 새로고침
-    const newMarkers = await mapApi.getMarkers(filterType ? { type: filterType } : undefined);
+    // 마커 새로고침 (캐시된 데이터)
+    const newMarkers = await mapApi.getMarkers();
     setMarkers(newMarkers);
-  }, [filterType]);
+  }, []);
 
   const handleCloseForm = useCallback(() => {
     setNewPlaceCoords(null);
@@ -108,10 +116,10 @@ export default function Home() {
     if (!editingPlace) return;
     await placeApi.update(editingPlace.id, data);
     setEditingPlace(null);
-    // 마커 새로고침
-    const newMarkers = await mapApi.getMarkers(filterType ? { type: filterType } : undefined);
+    // 마커 새로고침 (캐시된 데이터)
+    const newMarkers = await mapApi.getMarkers();
     setMarkers(newMarkers);
-  }, [editingPlace, filterType]);
+  }, [editingPlace]);
 
   const handleDeletePlace = useCallback(async (placeId: number) => {
     await placeApi.delete(placeId);
@@ -178,6 +186,58 @@ export default function Home() {
     setIsAuthenticated(false);
   }, []);
 
+  const handleTypeToggle = useCallback((type: PlaceType | null) => {
+    setSelectedTypes(prev => {
+      const next = new Set(prev);
+
+      if (type === null) {
+        // "전체" 클릭: 공개 3타입 전체 선택 (개인 타입은 유지)
+        PUBLIC_TYPES.forEach(t => next.add(t));
+        return next;
+      }
+
+      if (PERSONAL_TYPES.includes(type)) {
+        // 개인 타입: 독립 토글
+        if (next.has(type)) {
+          next.delete(type);
+        } else {
+          next.add(type);
+        }
+        return next;
+      }
+
+      // 공개 타입 클릭
+      const allPublicSelected = PUBLIC_TYPES.every(t => prev.has(t));
+      if (allPublicSelected) {
+        // 전체 상태에서 클릭 → 나머지 공개 타입 해제, 클릭한 것만
+        PUBLIC_TYPES.forEach(t => next.delete(t));
+        next.add(type);
+      } else {
+        // 개별 선택 상태 → 토글
+        if (next.has(type)) {
+          next.delete(type);
+        } else {
+          next.add(type);
+        }
+      }
+      return next;
+    });
+  }, []);
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefreshMarkers = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      const data = await mapApi.refreshMarkers();
+      setMarkers(data);
+    } catch (err) {
+      console.error('Failed to refresh markers:', err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, []);
+
   return (
     <main className="relative h-dvh w-screen overflow-hidden">
       {/* Map */}
@@ -210,10 +270,11 @@ export default function Home() {
         {/* Filter & Search */}
         <div className="bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm px-4 pt-2 pb-2.5 flex flex-col gap-3">
           <FilterButtons
-            selected={filterType}
-            onChange={setFilterType}
+            selectedTypes={selectedTypes}
+            onTypeToggle={handleTypeToggle}
             selectedGrades={selectedGrades}
             onGradeChange={setSelectedGrades}
+            isAuthenticated={isAuthenticated}
           />
           <AddressSearch onSelect={handleSearchSelect} />
         </div>
@@ -265,6 +326,27 @@ export default function Home() {
           onSubmit={handleUpdatePlace}
           onClose={handleCloseForm}
         />
+      )}
+
+      {/* Floating action button - bottom left (admin only) */}
+      {isAuthenticated && (
+        <div className="absolute bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] left-4 z-10">
+          <button
+            onClick={handleRefreshMarkers}
+            disabled={isRefreshing}
+            className="bg-white/90 backdrop-blur p-2.5 rounded-full shadow-lg hover:bg-white transition-colors disabled:opacity-50"
+            title="DB에서 마커 새로고침"
+          >
+            <svg
+              className={`w-5 h-5 text-gray-600 ${isRefreshing ? 'animate-spin' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
+        </div>
       )}
 
       {/* Floating action buttons - bottom right */}

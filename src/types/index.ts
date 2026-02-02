@@ -1,4 +1,5 @@
-export type PlaceType = 'RESTAURANT' | 'KIDS_PLAYGROUND' | 'RELAXATION';
+export type PlaceType = 'RESTAURANT' | 'KIDS_PLAYGROUND' | 'RELAXATION'
+  | 'MY_FOOTPRINT' | 'RECOMMENDED_RESTAURANT' | 'RECOMMENDED_SPOT';
 
 export interface Place {
   id: number;

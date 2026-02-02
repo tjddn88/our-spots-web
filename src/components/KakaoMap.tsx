@@ -37,6 +37,21 @@ const TYPE_GRADE_COLORS = {
     2: '#818CF8', // 인디고
     3: '#C7D2FE', // 연인디고
   },
+  MY_FOOTPRINT: {
+    1: '#D97706', // 진앰버
+    2: '#FBBF24', // 앰버
+    3: '#FDE68A', // 연앰버
+  },
+  RECOMMENDED_RESTAURANT: {
+    1: '#DB2777', // 진핑크
+    2: '#F472B6', // 핑크
+    3: '#F9A8D4', // 연핑크
+  },
+  RECOMMENDED_SPOT: {
+    1: '#0891B2', // 진시안
+    2: '#22D3EE', // 시안
+    3: '#A5F3FC', // 연시안
+  },
 } as const;
 
 // 기본 색상 (등급 없을 때)
@@ -184,9 +199,18 @@ export default function KakaoMap({
       } else if (placeType === 'KIDS_PLAYGROUND') {
         // 아이 놀이터: 하트
         icon = `<path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>`;
-      } else {
+      } else if (placeType === 'RELAXATION') {
         // 아빠의 쉼터: 커피잔
         icon = `<path d="M2 21h18v-2H2v2zm2-4h14V7H4v10zm4-8h6v6H8V9zm8 0h2v6h-2V9zM6 3h12v2H6V3z"/>`;
+      } else if (placeType === 'MY_FOOTPRINT') {
+        // 나의 발자취: 발자국
+        icon = `<path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7"/>`;
+      } else if (placeType === 'RECOMMENDED_RESTAURANT') {
+        // 추천 맛집: 별
+        icon = `<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>`;
+      } else {
+        // 추천 명소: 깃발
+        icon = `<path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6h-5.6z"/>`;
       }
 
       const content = document.createElement('div');
