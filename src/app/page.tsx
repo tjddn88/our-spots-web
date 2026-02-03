@@ -33,7 +33,12 @@ export default function Home() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   useEffect(() => {
-    setIsAuthenticated(isLoggedIn());
+    const loggedIn = isLoggedIn();
+    setIsAuthenticated(loggedIn);
+    // 로그인 상태면 "나의 발자취" 기본 활성화
+    if (loggedIn) {
+      setSelectedTypes(prev => new Set([...prev, 'MY_FOOTPRINT']));
+    }
 
     const handleAuthExpired = () => {
       setIsAuthenticated(false);
@@ -174,6 +179,8 @@ export default function Home() {
       await authApi.login(password);
       setIsAuthenticated(true);
       setShowLoginModal(false);
+      // 로그인 시 "나의 발자취" 기본 활성화
+      setSelectedTypes(prev => new Set([...prev, 'MY_FOOTPRINT']));
     } catch (err) {
       setLoginError(err instanceof Error ? err.message : '로그인에 실패했습니다');
     } finally {
@@ -184,6 +191,12 @@ export default function Home() {
   const handleLogout = useCallback(() => {
     authApi.logout();
     setIsAuthenticated(false);
+    // 로그아웃 시 개인 카테고리 선택 해제
+    setSelectedTypes(prev => {
+      const next = new Set(prev);
+      PERSONAL_TYPES.forEach(t => next.delete(t));
+      return next;
+    });
   }, []);
 
   const handleTypeToggle = useCallback((type: PlaceType | null) => {
@@ -191,8 +204,15 @@ export default function Home() {
       const next = new Set(prev);
 
       if (type === null) {
-        // "전체" 클릭: 공개 3타입 전체 선택 (개인 타입은 유지)
-        PUBLIC_TYPES.forEach(t => next.add(t));
+        // "전체" 클릭: 토글 동작
+        const allPublicSelected = PUBLIC_TYPES.every(t => prev.has(t));
+        if (allPublicSelected) {
+          // 이미 전체 선택 상태 → 공개 3타입 모두 해제
+          PUBLIC_TYPES.forEach(t => next.delete(t));
+        } else {
+          // 전체가 아님 → 공개 3타입 전체 선택
+          PUBLIC_TYPES.forEach(t => next.add(t));
+        }
         return next;
       }
 

@@ -23,34 +23,34 @@ const KAKAO_APP_KEY = process.env.NEXT_PUBLIC_KAKAO_MAP_APP_KEY || '';
 // 타입별 등급 색상
 const TYPE_GRADE_COLORS = {
   RESTAURANT: {
-    1: '#DC2626', // 진빨강
-    2: '#F87171', // 빨강
-    3: '#FCA5A5', // 연빨강
+    1: '#DC2626', // 진빨강 (Dark Red)
+    2: '#F87171', // 빨강 (Red)
+    3: '#FCA5A5', // 연빨강 (Light Red)
   },
   KIDS_PLAYGROUND: {
-    1: '#059669', // 진초록 (에메랄드)
-    2: '#34D399', // 초록
-    3: '#A7F3D0', // 연초록
+    1: '#166534', // 진초록 (Forest)
+    2: '#22C55E', // 초록 (Green)
+    3: '#84CC16', // 연두 (Lime)
   },
   RELAXATION: {
-    1: '#4F46E5', // 진인디고
-    2: '#818CF8', // 인디고
-    3: '#C7D2FE', // 연인디고
+    1: '#1E3A8A', // 네이비 (Navy)
+    2: '#3B82F6', // 파랑 (Blue)
+    3: '#7DD3FC', // 하늘 (Sky Blue)
   },
   MY_FOOTPRINT: {
-    1: '#D97706', // 진앰버
-    2: '#FBBF24', // 앰버
-    3: '#FDE68A', // 연앰버
+    1: '#7E22CE', // 진보라 (Deep Purple)
+    2: '#A855F7', // 보라 (Purple)
+    3: '#D8B4FE', // 라벤더 (Lavender)
   },
   RECOMMENDED_RESTAURANT: {
-    1: '#DB2777', // 진핑크
-    2: '#F472B6', // 핑크
-    3: '#F9A8D4', // 연핑크
+    1: '#C2410C', // 진주황 (Burnt Orange)
+    2: '#F97316', // 주황 (Orange)
+    3: '#FDBA74', // 살구 (Apricot)
   },
   RECOMMENDED_SPOT: {
-    1: '#0891B2', // 진시안
-    2: '#22D3EE', // 시안
-    3: '#A5F3FC', // 연시안
+    1: '#0D9488', // 청록 (Teal)
+    2: '#2DD4BF', // 터쿼이즈 (Turquoise)
+    3: '#99F6E4', // 민트 (Mint)
   },
 } as const;
 

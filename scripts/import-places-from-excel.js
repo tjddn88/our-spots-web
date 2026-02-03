@@ -24,6 +24,29 @@ if (fs.existsSync(envPath)) {
 
 const KAKAO_REST_API_KEY = '157e20da2dcc2a1ce196553f72cd72ca'; // REST API 키 (주소검색용)
 const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8080';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+
+let jwtToken = null;
+
+// 로그인해서 JWT 토큰 획득
+async function login() {
+  if (!ADMIN_PASSWORD) {
+    console.error('❌ ADMIN_PASSWORD 환경변수가 필요합니다. .env.local에 설정해주세요.');
+    process.exit(1);
+  }
+  const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: ADMIN_PASSWORD })
+  });
+  const data = await res.json();
+  if (data.success && data.data?.token) {
+    jwtToken = data.data.token;
+    return true;
+  }
+  console.error('❌ 로그인 실패:', data.error || '알 수 없는 오류');
+  return false;
+}
 
 // 카카오 주소 검색 API
 async function getCoordinates(address, name) {
@@ -62,10 +85,16 @@ async function getCoordinates(address, name) {
 async function createPlace(place) {
   const res = await fetch(`${API_BASE_URL}/api/places`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${jwtToken}`
+    },
     body: JSON.stringify(place)
   });
   const data = await res.json();
+  if (!data.success) {
+    console.log(`(${data.error || '알 수 없는 오류'})`);
+  }
   return data.success;
 }
 
@@ -87,6 +116,13 @@ async function main() {
   console.log('🚀 엑셀 장소 일괄 등록 시작\n');
   console.log(`파일: ${excelPath}`);
   console.log(`API: ${API_BASE_URL}\n`);
+
+  // 로그인
+  console.log('🔐 로그인 중...');
+  if (!await login()) {
+    process.exit(1);
+  }
+  console.log('✅ 로그인 성공\n');
 
   // Python으로 엑셀 읽기
   const { execSync } = require('child_process');
@@ -162,7 +198,8 @@ print(json.dumps(rows, ensure_ascii=False))
         latitude: coords.lat,
         longitude: coords.lng,
         type: type || 'RESTAURANT',
-        grade: grade || 3
+        grade: grade || 3,
+        description: place.description?.trim() || null
       });
 
       if (created) {

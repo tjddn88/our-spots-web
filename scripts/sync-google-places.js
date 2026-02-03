@@ -26,11 +26,34 @@ if (fs.existsSync(envPath)) {
 
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8080';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+
+let jwtToken = null;
 
 if (!GOOGLE_API_KEY) {
   console.error('❌ GOOGLE_API_KEY가 설정되지 않았습니다.');
   console.error('   .env.local 파일에 GOOGLE_API_KEY=your_key 추가하세요.');
   process.exit(1);
+}
+
+// 로그인해서 JWT 토큰 획득
+async function login() {
+  if (!ADMIN_PASSWORD) {
+    console.error('❌ ADMIN_PASSWORD 환경변수가 필요합니다. .env.local에 설정해주세요.');
+    process.exit(1);
+  }
+  const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: ADMIN_PASSWORD })
+  });
+  const data = await res.json();
+  if (data.success && data.data?.token) {
+    jwtToken = data.data.token;
+    return true;
+  }
+  console.error('❌ 로그인 실패:', data.error || '알 수 없는 오류');
+  return false;
 }
 
 async function fetchAllPlaces() {
@@ -57,7 +80,10 @@ async function searchGooglePlace(name, address, lat, lng) {
 async function updatePlace(id, googleData) {
   const res = await fetch(`${API_BASE_URL}/api/places/${id}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${jwtToken}`
+    },
     body: JSON.stringify({
       googlePlaceId: googleData.place_id,
       googleRating: googleData.rating,
@@ -72,6 +98,13 @@ async function main() {
   console.log(`API URL: ${API_BASE_URL}`);
   console.log(`Google API Key: ${GOOGLE_API_KEY.substring(0, 10)}...`);
   console.log('');
+
+  // 로그인
+  console.log('🔐 로그인 중...');
+  if (!await login()) {
+    process.exit(1);
+  }
+  console.log('✅ 로그인 성공\n');
 
   try {
     // 1. 모든 장소 조회
