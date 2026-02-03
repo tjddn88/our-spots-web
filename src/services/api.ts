@@ -45,7 +45,13 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
     throw new Error('인증이 만료되었습니다. 다시 로그인해주세요.');
   }
 
-  const data: ApiResponse<T> = await res.json();
+  // 빈 응답 처리 (DELETE 등)
+  const text = await res.text();
+  if (!text) {
+    return undefined as T;
+  }
+
+  const data: ApiResponse<T> = JSON.parse(text);
 
   if (!data.success) {
     throw new Error(data.error || 'API request failed');
