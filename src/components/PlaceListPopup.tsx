@@ -32,13 +32,24 @@ export default function PlaceListPopup({ markers, position, onSelect, onClose }:
   const adjustedPosition = { ...position };
   const popupWidth = 240;
   const popupMaxHeight = 300;
+  const margin = 16;
 
   if (typeof window !== 'undefined') {
-    if (position.x + popupWidth > window.innerWidth - 16) {
+    // 우측 경계 초과 시 마커 왼쪽으로 배치
+    if (position.x + popupWidth > window.innerWidth - margin) {
       adjustedPosition.x = position.x - popupWidth - 60;
     }
-    if (position.y + popupMaxHeight > window.innerHeight - 16) {
-      adjustedPosition.y = Math.max(16, window.innerHeight - popupMaxHeight - 16);
+    // 좌측 경계 클램핑
+    if (adjustedPosition.x < margin) {
+      adjustedPosition.x = margin;
+    }
+    // 하단 경계 초과 시 위로 조정
+    if (position.y + popupMaxHeight > window.innerHeight - margin) {
+      adjustedPosition.y = Math.max(margin, window.innerHeight - popupMaxHeight - margin);
+    }
+    // 상단 경계 클램핑
+    if (adjustedPosition.y < margin) {
+      adjustedPosition.y = margin;
     }
   }
 

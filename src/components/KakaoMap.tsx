@@ -16,6 +16,7 @@ interface KakaoMapProps {
   center?: { lat: number; lng: number };
   zoom?: number;
   moveTo?: { lat: number; lng: number } | null;
+  previewPosition?: { lat: number; lng: number } | null;
 }
 
 // 좌표를 키로 변환 (소수점 5자리까지 반올림하여 같은 위치 판단)
@@ -67,10 +68,12 @@ export default function KakaoMap({
   center = { lat: 37.5665, lng: 126.978 },
   zoom = 3,
   moveTo,
+  previewPosition,
 }: KakaoMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markerInstancesRef = useRef<any[]>([]);
+  const previewPinRef = useRef<any>(null);
   const markerClickedRef = useRef(false); // 마커 클릭 플래그
   const [isLoaded, setIsLoaded] = useState(false);
   const [mapReady, setMapReady] = useState(false);
@@ -137,6 +140,77 @@ export default function KakaoMap({
     mapInstanceRef.current.setCenter(moveLatLng);
     mapInstanceRef.current.setLevel(6); // 줌 레벨 6
   }, [mapReady, moveTo]);
+
+  // Preview pin
+  useEffect(() => {
+    // 기존 임시 핀 제거
+    if (previewPinRef.current) {
+      previewPinRef.current.setMap(null);
+      previewPinRef.current = null;
+    }
+
+    if (!mapReady || !mapInstanceRef.current || !previewPosition) return;
+
+    const position = new window.kakao.maps.LatLng(previewPosition.lat, previewPosition.lng);
+
+    const pinEl = document.createElement('div');
+    pinEl.innerHTML = `
+      <div style="
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        animation: previewBounce 0.4s ease-out;
+      ">
+        <div style="
+          width: 28px;
+          height: 28px;
+          background: #EF4444;
+          border: 3px solid white;
+          border-radius: 50% 50% 50% 0;
+          transform: rotate(-45deg);
+          box-shadow: 0 3px 10px rgba(0,0,0,0.35);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        ">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="white" style="transform: rotate(45deg);">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+          </svg>
+        </div>
+        <div style="
+          width: 8px;
+          height: 8px;
+          background: rgba(0,0,0,0.2);
+          border-radius: 50%;
+          margin-top: 2px;
+        "></div>
+      </div>
+    `;
+
+    // 바운스 애니메이션 스타일 삽입
+    if (!document.getElementById('preview-pin-style')) {
+      const style = document.createElement('style');
+      style.id = 'preview-pin-style';
+      style.textContent = `
+        @keyframes previewBounce {
+          0% { transform: translateY(-20px); opacity: 0; }
+          60% { transform: translateY(4px); opacity: 1; }
+          100% { transform: translateY(0); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    const overlay = new window.kakao.maps.CustomOverlay({
+      position,
+      content: pinEl,
+      yAnchor: 1,
+      xAnchor: 0.5,
+    });
+
+    overlay.setMap(mapInstanceRef.current);
+    previewPinRef.current = overlay;
+  }, [mapReady, previewPosition]);
 
   // Map click event
   useEffect(() => {

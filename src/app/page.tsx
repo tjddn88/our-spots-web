@@ -9,6 +9,8 @@ import AddressSearch from '@/components/AddressSearch';
 import ShareLinkButton from '@/components/ShareLinkButton';
 import LoginModal from '@/components/LoginModal';
 import PlaceListPopup from '@/components/PlaceListPopup';
+import PlacePreviewCard from '@/components/PlacePreviewCard';
+import AboutModal from '@/components/AboutModal';
 import { mapApi, placeApi, authApi, isLoggedIn, clearToken } from '@/services/api';
 import { Marker, PlaceDetail as PlaceDetailType, PlaceType } from '@/types';
 
@@ -28,6 +30,7 @@ export default function Home() {
   const [newPlaceCoords, setNewPlaceCoords] = useState<{ lat: number; lng: number; address?: string; name?: string } | null>(null);
   const [moveTo, setMoveTo] = useState<{ lat: number; lng: number } | null>(null);
   const [editingPlace, setEditingPlace] = useState<PlaceDetailType | null>(null);
+  const [previewPlace, setPreviewPlace] = useState<{ lat: number; lng: number; address: string; name: string } | null>(null);
 
   // Auth state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -132,6 +135,7 @@ export default function Home() {
     setPanelPosition(null);
     setGroupMarkers(null);
     setGroupPosition(null);
+    setPreviewPlace(null);
   }, []);
 
   const handleCreatePlace = useCallback(async (data: PlaceFormData) => {
@@ -171,17 +175,33 @@ export default function Home() {
   }, []);
 
   const handleSearchSelect = useCallback((result: { lat: number; lng: number; address: string; name?: string }) => {
-    // 맵 이동
+    // 맵 이동 + 미리보기 카드 표시
     setMoveTo({ lat: result.lat, lng: result.lng });
-    // 장소 추가 폼 열기
-    setNewPlaceCoords({
+    setPreviewPlace({
       lat: result.lat,
       lng: result.lng,
       address: result.address,
-      name: result.name,
+      name: result.name || result.address,
     });
     setSelectedPlace(null);
     setPanelPosition(null);
+    setGroupMarkers(null);
+    setGroupPosition(null);
+  }, []);
+
+  const handlePreviewRegister = useCallback(() => {
+    if (!previewPlace) return;
+    setNewPlaceCoords({
+      lat: previewPlace.lat,
+      lng: previewPlace.lng,
+      address: previewPlace.address,
+      name: previewPlace.name,
+    });
+    setPreviewPlace(null);
+  }, [previewPlace]);
+
+  const handlePreviewClose = useCallback(() => {
+    setPreviewPlace(null);
   }, []);
 
   const handleMoveToCurrentLocation = useCallback(() => {
@@ -281,6 +301,7 @@ export default function Home() {
   }, []);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
 
   const handleRefreshMarkers = useCallback(async () => {
     setIsRefreshing(true);
@@ -304,6 +325,7 @@ export default function Home() {
         center={{ lat: 37.5665, lng: 126.978 }}
         zoom={3}
         moveTo={moveTo}
+        previewPosition={previewPlace ? { lat: previewPlace.lat, lng: previewPlace.lng } : null}
       />
 
       {/* Header */}
@@ -364,6 +386,16 @@ export default function Home() {
         />
       )}
 
+      {/* Place Preview Card (검색 결과 클릭 시 미리보기) */}
+      {previewPlace && (
+        <PlacePreviewCard
+          name={previewPlace.name}
+          address={previewPlace.address}
+          onRegister={handlePreviewRegister}
+          onClose={handlePreviewClose}
+        />
+      )}
+
       {/* Place Form Modal - Create (검색 결과 클릭으로만 열림) */}
       {newPlaceCoords && (
         <PlaceForm
@@ -394,9 +426,9 @@ export default function Home() {
         />
       )}
 
-      {/* Floating action button - bottom left (admin only) */}
-      {isAuthenticated && (
-        <div className="absolute bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] left-4 z-10">
+      {/* Floating action buttons - bottom left */}
+      <div className="absolute bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] left-4 z-10 flex flex-col gap-2">
+        {isAuthenticated && (
           <button
             onClick={handleRefreshMarkers}
             disabled={isRefreshing}
@@ -412,23 +444,7 @@ export default function Home() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
           </button>
-        </div>
-      )}
-
-      {/* Floating action buttons - bottom right */}
-      <div className="absolute bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] right-4 z-10 flex flex-col gap-2">
-        <button
-          onClick={handleMoveToCurrentLocation}
-          className="bg-white/90 backdrop-blur p-2.5 rounded-full shadow-lg hover:bg-white transition-colors"
-          title="현재 위치로 이동"
-        >
-          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-        </button>
-        <ShareLinkButton />
-        {/* Login/Logout Button */}
+        )}
         <button
           onClick={isAuthenticated ? handleLogout : () => { setLoginError(undefined); setShowLoginModal(true); }}
           className={`backdrop-blur p-2.5 rounded-full shadow-lg transition-colors ${
@@ -450,6 +466,30 @@ export default function Home() {
         </button>
       </div>
 
+      {/* Floating action buttons - bottom right */}
+      <div className="absolute bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] right-4 z-10 flex flex-col gap-2">
+        <button
+          onClick={handleMoveToCurrentLocation}
+          className="bg-white/90 backdrop-blur p-2.5 rounded-full shadow-lg hover:bg-white transition-colors"
+          title="현재 위치로 이동"
+        >
+          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </button>
+        <ShareLinkButton />
+        <button
+          onClick={() => setShowAbout(true)}
+          className="bg-white/90 backdrop-blur p-2.5 rounded-full shadow-lg hover:bg-white transition-colors"
+          title="프로젝트 소개"
+        >
+          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+        </button>
+      </div>
+
       {/* Login Modal */}
       <LoginModal
         isOpen={showLoginModal}
@@ -458,6 +498,9 @@ export default function Home() {
         isLoading={isLoggingIn}
         error={loginError}
       />
+
+      {/* About Modal */}
+      <AboutModal isOpen={showAbout} onClose={() => setShowAbout(false)} />
     </main>
   );
 }
