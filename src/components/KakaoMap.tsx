@@ -11,12 +11,15 @@ declare global {
 
 interface KakaoMapProps {
   markers: Marker[];
-  onMarkerClick: (marker: Marker, position: { x: number; y: number }) => void;
+  onMarkerClick: (markers: Marker[], position: { x: number; y: number }) => void;
   onMapClick?: (latlng: { lat: number; lng: number; address?: string }) => void;
   center?: { lat: number; lng: number };
   zoom?: number;
   moveTo?: { lat: number; lng: number } | null;
 }
+
+// 좌표를 키로 변환 (소수점 5자리까지 반올림하여 같은 위치 판단)
+const coordKey = (lat: number, lng: number) => `${lat.toFixed(5)},${lng.toFixed(5)}`;
 
 const KAKAO_APP_KEY = process.env.NEXT_PUBLIC_KAKAO_MAP_APP_KEY || '';
 
@@ -182,70 +185,112 @@ export default function KakaoMap({
     markerInstancesRef.current.forEach((marker) => marker.setMap(null));
     markerInstancesRef.current = [];
 
-    markers.forEach((markerData) => {
-      const position = new window.kakao.maps.LatLng(markerData.latitude, markerData.longitude);
-      const placeType = markerData.type as keyof typeof TYPE_GRADE_COLORS;
-
-      // 색상 결정
-      const typeColors = TYPE_GRADE_COLORS[placeType];
-      const grade = markerData.grade as 1 | 2 | 3 | undefined;
-      const color = typeColors && grade ? typeColors[grade] : DEFAULT_COLOR;
-
-      // 아이콘 결정
-      let icon: string;
-      if (placeType === 'RESTAURANT') {
-        // 맛집: 포크 & 나이프
-        icon = `<path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/>`;
-      } else if (placeType === 'KIDS_PLAYGROUND') {
-        // 아이 놀이터: 하트
-        icon = `<path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>`;
-      } else if (placeType === 'RELAXATION') {
-        // 아빠의 쉼터: 커피잔
-        icon = `<path d="M2 21h18v-2H2v2zm2-4h14V7H4v10zm4-8h6v6H8V9zm8 0h2v6h-2V9zM6 3h12v2H6V3z"/>`;
-      } else if (placeType === 'MY_FOOTPRINT') {
-        // 나의 발자취: 발자국
-        icon = `<path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7"/>`;
-      } else if (placeType === 'RECOMMENDED_RESTAURANT') {
-        // 추천 맛집: 별
-        icon = `<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>`;
-      } else {
-        // 추천 명소: 깃발
-        icon = `<path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6h-5.6z"/>`;
+    // 같은 좌표의 마커들을 그룹화
+    const groupedMarkers = new Map<string, Marker[]>();
+    markers.forEach((marker) => {
+      const key = coordKey(marker.latitude, marker.longitude);
+      if (!groupedMarkers.has(key)) {
+        groupedMarkers.set(key, []);
       }
+      groupedMarkers.get(key)!.push(marker);
+    });
+
+    // 아이콘 생성 헬퍼 함수
+    const getIcon = (placeType: string) => {
+      if (placeType === 'RESTAURANT') {
+        return `<path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/>`;
+      } else if (placeType === 'KIDS_PLAYGROUND') {
+        return `<path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>`;
+      } else if (placeType === 'RELAXATION') {
+        return `<path d="M2 21h18v-2H2v2zm2-4h14V7H4v10zm4-8h6v6H8V9zm8 0h2v6h-2V9zM6 3h12v2H6V3z"/>`;
+      } else if (placeType === 'MY_FOOTPRINT') {
+        return `<path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7"/>`;
+      } else if (placeType === 'RECOMMENDED_RESTAURANT') {
+        return `<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>`;
+      } else {
+        return `<path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6h-5.6z"/>`;
+      }
+    };
+
+    groupedMarkers.forEach((markersAtLocation) => {
+      const firstMarker = markersAtLocation[0];
+      const position = new window.kakao.maps.LatLng(firstMarker.latitude, firstMarker.longitude);
+      const isGroup = markersAtLocation.length > 1;
+
+      const placeType = firstMarker.type as keyof typeof TYPE_GRADE_COLORS;
+      const typeColors = TYPE_GRADE_COLORS[placeType];
+      const grade = firstMarker.grade as 1 | 2 | 3 | undefined;
+      const color = typeColors && grade ? typeColors[grade] : DEFAULT_COLOR;
+      const icon = getIcon(firstMarker.type);
 
       const content = document.createElement('div');
-      content.innerHTML = `
-        <div style="
-          width: 44px;
-          height: 44px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-        ">
+
+      if (isGroup) {
+        // 그룹 마커: 숫자 뱃지 표시
+        content.innerHTML = `
           <div style="
-            width: 18px;
-            height: 18px;
-            background-color: ${color};
-            border: 2px solid white;
-            border-radius: 50%;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            width: 44px;
+            height: 44px;
             display: flex;
             align-items: center;
             justify-content: center;
+            cursor: pointer;
+            position: relative;
           ">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="white">
-              ${icon}
-            </svg>
+            <div style="
+              width: 22px;
+              height: 22px;
+              background: linear-gradient(135deg, #6366F1, #8B5CF6);
+              border: 2px solid white;
+              border-radius: 50%;
+              box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              color: white;
+              font-size: 11px;
+              font-weight: bold;
+            ">
+              ${markersAtLocation.length}
+            </div>
           </div>
-        </div>
-      `;
+        `;
+      } else {
+        // 단일 마커
+        content.innerHTML = `
+          <div style="
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+          ">
+            <div style="
+              width: 18px;
+              height: 18px;
+              background-color: ${color};
+              border: 2px solid white;
+              border-radius: 50%;
+              box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            ">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="white">
+                ${icon}
+              </svg>
+            </div>
+          </div>
+        `;
+      }
+
       content.style.cursor = 'pointer';
       content.onclick = (e) => {
         e.stopPropagation();
-        markerClickedRef.current = true; // 마커 클릭 플래그 설정
+        markerClickedRef.current = true;
         const rect = content.getBoundingClientRect();
-        onMarkerClick(markerData, {
+        onMarkerClick(markersAtLocation, {
           x: rect.right + 8,
           y: rect.top
         });

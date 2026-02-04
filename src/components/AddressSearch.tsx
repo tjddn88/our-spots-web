@@ -39,19 +39,47 @@ export default function AddressSearch({ onSelect }: AddressSearchProps) {
   }, []);
 
   const handleSearch = () => {
-    if (!query.trim() || !window.kakao?.maps?.services?.Places) return;
+    if (!query.trim() || !window.kakao?.maps?.services) return;
 
     setIsSearching(true);
+    const geocoder = new window.kakao.maps.services.Geocoder();
     const ps = new window.kakao.maps.services.Places();
 
-    ps.keywordSearch(query, (data: SearchResult[], status: any) => {
-      setIsSearching(false);
-      if (status === window.kakao.maps.services.Status.OK) {
-        setResults(data.slice(0, 5)); // 최대 5개
-        setShowResults(true);
-      } else {
-        setResults([]);
+    // 1. 키워드 검색 먼저 시도
+    ps.keywordSearch(query, (keywordData: SearchResult[], keywordStatus: any) => {
+      const keywordResults: SearchResult[] = [];
+      if (keywordStatus === window.kakao.maps.services.Status.OK) {
+        keywordResults.push(...keywordData.slice(0, 5));
       }
+
+      // 2. 주소 검색도 시도
+      geocoder.addressSearch(query, (addressData: any[], addressStatus: any) => {
+        setIsSearching(false);
+
+        const addressResults: SearchResult[] = [];
+        if (addressStatus === window.kakao.maps.services.Status.OK) {
+          addressResults.push(...addressData.slice(0, 3).map((item: any) => ({
+            place_name: item.road_address?.building_name || item.address_name,
+            address_name: item.address_name,
+            road_address_name: item.road_address?.address_name,
+            x: item.x,
+            y: item.y,
+          })));
+        }
+
+        // 키워드 검색 결과 상단, 주소 검색 결과 하단 (중복 제거)
+        const combined = [...keywordResults];
+        const keywordKeys = new Set(keywordResults.map(r => `${r.x},${r.y}`));
+
+        addressResults.forEach(r => {
+          if (!keywordKeys.has(`${r.x},${r.y}`)) {
+            combined.push(r);
+          }
+        });
+
+        setResults(combined.slice(0, 7)); // 최대 7개
+        setShowResults(true);
+      });
     });
   };
 

@@ -8,6 +8,7 @@ import FilterButtons from '@/components/FilterButtons';
 import AddressSearch from '@/components/AddressSearch';
 import ShareLinkButton from '@/components/ShareLinkButton';
 import LoginModal from '@/components/LoginModal';
+import PlaceListPopup from '@/components/PlaceListPopup';
 import { mapApi, placeApi, authApi, isLoggedIn, clearToken } from '@/services/api';
 import { Marker, PlaceDetail as PlaceDetailType, PlaceType } from '@/types';
 
@@ -22,6 +23,8 @@ export default function Home() {
   const [selectedGrades, setSelectedGrades] = useState<Set<number>>(new Set([1, 2])); // 기본: 최애, 추천
   const [error, setError] = useState<string | null>(null);
   const [panelPosition, setPanelPosition] = useState<{ x: number; y: number } | null>(null);
+  const [groupMarkers, setGroupMarkers] = useState<Marker[] | null>(null);
+  const [groupPosition, setGroupPosition] = useState<{ x: number; y: number } | null>(null);
   const [newPlaceCoords, setNewPlaceCoords] = useState<{ lat: number; lng: number; address?: string; name?: string } | null>(null);
   const [moveTo, setMoveTo] = useState<{ lat: number; lng: number } | null>(null);
   const [editingPlace, setEditingPlace] = useState<PlaceDetailType | null>(null);
@@ -74,8 +77,34 @@ export default function Home() {
     return result.filter(m => m.grade && selectedGrades.has(m.grade));
   }, [markers, selectedTypes, selectedGrades, isAuthenticated]);
 
-  const handleMarkerClick = useCallback(async (marker: Marker, position: { x: number; y: number }) => {
-    setPanelPosition(position);
+  const handleMarkerClick = useCallback(async (markers: Marker[], position: { x: number; y: number }) => {
+    if (markers.length > 1) {
+      // 그룹 마커: 장소 목록 팝업 표시
+      setGroupMarkers(markers);
+      setGroupPosition(position);
+      setSelectedPlace(null);
+      setPanelPosition(null);
+    } else {
+      // 단일 마커: 상세 정보 표시
+      setGroupMarkers(null);
+      setGroupPosition(null);
+      setPanelPosition(position);
+      setIsLoadingPlace(true);
+      try {
+        const place = await placeApi.getById(markers[0].id);
+        setSelectedPlace(place);
+      } catch (err) {
+        console.error('Failed to fetch place detail:', err);
+      } finally {
+        setIsLoadingPlace(false);
+      }
+    }
+  }, []);
+
+  const handleGroupMarkerSelect = useCallback(async (marker: Marker) => {
+    setGroupMarkers(null);
+    setGroupPosition(null);
+    setPanelPosition(groupPosition);
     setIsLoadingPlace(true);
     try {
       const place = await placeApi.getById(marker.id);
@@ -85,6 +114,11 @@ export default function Home() {
     } finally {
       setIsLoadingPlace(false);
     }
+  }, [groupPosition]);
+
+  const handleCloseGroupPopup = useCallback(() => {
+    setGroupMarkers(null);
+    setGroupPosition(null);
   }, []);
 
   const handleCloseDetail = useCallback(() => {
@@ -93,9 +127,11 @@ export default function Home() {
   }, []);
 
   const handleMapClick = useCallback(() => {
-    // 맵 클릭 시 상세 패널만 닫기
+    // 맵 클릭 시 모든 팝업 닫기
     setSelectedPlace(null);
     setPanelPosition(null);
+    setGroupMarkers(null);
+    setGroupPosition(null);
   }, []);
 
   const handleCreatePlace = useCallback(async (data: PlaceFormData) => {
@@ -317,6 +353,16 @@ export default function Home() {
         position={panelPosition}
         isAuthenticated={isAuthenticated}
       />
+
+      {/* Place List Popup (같은 위치에 여러 장소) */}
+      {groupMarkers && groupPosition && (
+        <PlaceListPopup
+          markers={groupMarkers}
+          position={groupPosition}
+          onSelect={handleGroupMarkerSelect}
+          onClose={handleCloseGroupPopup}
+        />
+      )}
 
       {/* Place Form Modal - Create (검색 결과 클릭으로만 열림) */}
       {newPlaceCoords && (
