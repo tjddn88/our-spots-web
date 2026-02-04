@@ -25,7 +25,7 @@ export default function AboutModal({ isOpen, onClose }: AboutModalProps) {
               <p>
                 아이와 함께 다니며 기억에 남았던 장소와,
                 광화문·천호역 근무 시절부터 현재 잠실까지 이어진
-                맛집 기록을 정리하다 보니 하나의 지도가 완성되었습니다.
+                맛집을 정리하다 보니 하나의 지도가 완성되었습니다.
               </p>
               <p>
                 &lsquo;하민이네 대동여지도&rsquo;는 개인 경험을 기반으로 정리한
