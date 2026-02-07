@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Marker, PlaceType } from '@/types';
+import { MARKER_COLORS, DEFAULT_MARKER_COLOR, MAP_ZOOM, getMarkerColor } from '@/constants/placeConfig';
 
 declare global {
   interface Window {
@@ -24,49 +25,12 @@ const coordKey = (lat: number, lng: number) => `${lat.toFixed(5)},${lng.toFixed(
 
 const KAKAO_APP_KEY = process.env.NEXT_PUBLIC_KAKAO_MAP_APP_KEY || '';
 
-// 타입별 등급 색상
-const TYPE_GRADE_COLORS = {
-  RESTAURANT: {
-    1: '#DC2626', // 진빨강 (Dark Red)
-    2: '#F87171', // 빨강 (Red)
-    3: '#FCA5A5', // 연빨강 (Light Red)
-  },
-  KIDS_PLAYGROUND: {
-    1: '#166534', // 진초록 (Forest)
-    2: '#22C55E', // 초록 (Green)
-    3: '#84CC16', // 연두 (Lime)
-  },
-  RELAXATION: {
-    1: '#1E3A8A', // 네이비 (Navy)
-    2: '#3B82F6', // 파랑 (Blue)
-    3: '#7DD3FC', // 하늘 (Sky Blue)
-  },
-  MY_FOOTPRINT: {
-    1: '#7E22CE', // 진보라 (Deep Purple)
-    2: '#A855F7', // 보라 (Purple)
-    3: '#D8B4FE', // 라벤더 (Lavender)
-  },
-  RECOMMENDED_RESTAURANT: {
-    1: '#C2410C', // 진주황 (Burnt Orange)
-    2: '#F97316', // 주황 (Orange)
-    3: '#FDBA74', // 살구 (Apricot)
-  },
-  RECOMMENDED_SPOT: {
-    1: '#0D9488', // 청록 (Teal)
-    2: '#2DD4BF', // 터쿼이즈 (Turquoise)
-    3: '#99F6E4', // 민트 (Mint)
-  },
-} as const;
-
-// 기본 색상 (등급 없을 때)
-const DEFAULT_COLOR = '#9CA3AF';
-
 export default function KakaoMap({
   markers,
   onMarkerClick,
   onMapClick,
   center = { lat: 37.5665, lng: 126.978 },
-  zoom = 3,
+  zoom = MAP_ZOOM.DEFAULT,
   moveTo,
   previewPosition,
 }: KakaoMapProps) {
@@ -138,7 +102,7 @@ export default function KakaoMap({
 
     const moveLatLng = new window.kakao.maps.LatLng(moveTo.lat, moveTo.lng);
     mapInstanceRef.current.setCenter(moveLatLng);
-    mapInstanceRef.current.setLevel(6); // 줌 레벨 6
+    mapInstanceRef.current.setLevel(MAP_ZOOM.ON_MOVE);
   }, [mapReady, moveTo]);
 
   // Preview pin
@@ -291,10 +255,7 @@ export default function KakaoMap({
       const position = new window.kakao.maps.LatLng(firstMarker.latitude, firstMarker.longitude);
       const isGroup = markersAtLocation.length > 1;
 
-      const placeType = firstMarker.type as keyof typeof TYPE_GRADE_COLORS;
-      const typeColors = TYPE_GRADE_COLORS[placeType];
-      const grade = firstMarker.grade as 1 | 2 | 3 | undefined;
-      const color = typeColors && grade ? typeColors[grade] : DEFAULT_COLOR;
+      const color = getMarkerColor(firstMarker.type as PlaceType, firstMarker.grade);
       const icon = getIcon(firstMarker.type);
 
       const content = document.createElement('div');

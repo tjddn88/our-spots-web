@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
+import { useClickOutside } from '@/hooks/useClickOutside';
 
 declare global {
   interface Window {
@@ -28,15 +29,8 @@ export default function AddressSearch({ onSelect }: AddressSearchProps) {
   const searchRef = useRef<HTMLDivElement>(null);
 
   // 외부 클릭 시 결과 닫기
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
-        setShowResults(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  const closeResults = useCallback(() => setShowResults(false), []);
+  useClickOutside(searchRef, closeResults);
 
   const handleSearch = () => {
     if (!query.trim() || !window.kakao?.maps?.services) return;

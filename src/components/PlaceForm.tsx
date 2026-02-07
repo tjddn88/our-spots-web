@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { PlaceType } from '@/types';
+import { TYPE_CONFIG, GRADE_CONFIG } from '@/constants/placeConfig';
 
 interface PlaceFormProps {
   latitude: number;
@@ -88,75 +89,33 @@ export default function PlaceForm({ latitude, longitude, initialAddress, initial
             <label className="block text-sm font-medium text-gray-700 mb-1">유형</label>
             <div className="flex flex-col gap-2">
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setType('RESTAURANT')}
-                  className={`flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
-                    type === 'RESTAURANT'
-                      ? 'bg-red-500 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  🍽️ 맛집
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setType('KIDS_PLAYGROUND')}
-                  className={`flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
-                    type === 'KIDS_PLAYGROUND'
-                      ? 'bg-emerald-500 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  🎠 아이 놀이터
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setType('RELAXATION')}
-                  className={`flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
-                    type === 'RELAXATION'
-                      ? 'bg-indigo-500 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  ☕ 아빠의 시간
-                </button>
+                {(['RESTAURANT', 'KIDS_PLAYGROUND', 'RELAXATION'] as PlaceType[]).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setType(t)}
+                    className={`flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+                      type === t ? TYPE_CONFIG[t].activeColor : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {TYPE_CONFIG[t].emoji} {TYPE_CONFIG[t].label}
+                  </button>
+                ))}
               </div>
               {isAuthenticated && (
                 <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setType('MY_FOOTPRINT')}
-                    className={`flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
-                      type === 'MY_FOOTPRINT'
-                        ? 'bg-amber-500 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    👣 나의 발자취
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setType('RECOMMENDED_RESTAURANT')}
-                    className={`flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
-                      type === 'RECOMMENDED_RESTAURANT'
-                        ? 'bg-pink-500 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    🍴 추천 맛집
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setType('RECOMMENDED_SPOT')}
-                    className={`flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
-                      type === 'RECOMMENDED_SPOT'
-                        ? 'bg-cyan-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    🏛️ 추천 명소
-                  </button>
+                  {(['MY_FOOTPRINT', 'RECOMMENDED_RESTAURANT', 'RECOMMENDED_SPOT'] as PlaceType[]).map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setType(t)}
+                      className={`flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+                        type === t ? TYPE_CONFIG[t].activeColor : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {TYPE_CONFIG[t].emoji} {TYPE_CONFIG[t].label}
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
@@ -192,41 +151,24 @@ export default function PlaceForm({ latitude, longitude, initialAddress, initial
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">등급</label>
             <div className="flex gap-2">
-              {[1, 2, 3].map((g) => {
-                const getLabel = () => {
-                  if (type === 'RESTAURANT') {
-                    return g === 1 ? '🔥 찐맛집' : g === 2 ? '👌 괜찮은 곳' : '🙂 무난한';
-                  } else if (type === 'KIDS_PLAYGROUND') {
-                    return g === 1 ? '⭐ 하민 최애' : g === 2 ? '👍 하민 추천' : '🙂 무난한';
-                  } else if (type === 'RELAXATION') {
-                    return g === 1 ? '⭐ 소중한 시간' : g === 2 ? '👍 알찬 시간' : '🙂 무난한';
-                  } else if (type === 'MY_FOOTPRINT') {
-                    return g === 1 ? '⭐ 특별한 곳' : g === 2 ? '👍 좋은 곳' : '🙂 무난한';
-                  } else if (type === 'RECOMMENDED_RESTAURANT') {
-                    return g === 1 ? '🔥 강추' : g === 2 ? '👌 괜찮은 곳' : '🙂 무난한';
-                  } else {
-                    return g === 1 ? '⭐ 꼭 가볼 곳' : g === 2 ? '👍 가볼만한 곳' : '🙂 무난한';
-                  }
-                };
-                return (
-                  <button
-                    key={g}
-                    type="button"
-                    onClick={() => setGrade(g)}
-                    className={`flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
-                      grade === g
-                        ? g === 1
-                          ? 'bg-red-500 text-white'
-                          : g === 2
-                          ? 'bg-yellow-500 text-white'
-                          : 'bg-green-500 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {getLabel()}
-                  </button>
-                );
-              })}
+              {([1, 2, 3] as const).map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setGrade(g)}
+                  className={`flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+                    grade === g
+                      ? g === 1
+                        ? 'bg-red-500 text-white'
+                        : g === 2
+                        ? 'bg-yellow-500 text-white'
+                        : 'bg-green-500 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {GRADE_CONFIG[type][g].label}
+                </button>
+              ))}
             </div>
           </div>
 

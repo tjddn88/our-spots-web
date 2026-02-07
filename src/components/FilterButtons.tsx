@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { PlaceType } from '@/types';
+import { PUBLIC_FILTERS, PERSONAL_FILTERS, GRADE_LABELS, PUBLIC_TYPES } from '@/constants/placeConfig';
+import { useClickOutside } from '@/hooks/useClickOutside';
 
 interface FilterButtonsProps {
   selectedTypes: Set<PlaceType>;
@@ -11,28 +13,6 @@ interface FilterButtonsProps {
   isAuthenticated: boolean;
 }
 
-const PUBLIC_FILTERS: { type: PlaceType | null; label: string; emoji: string }[] = [
-  { type: null, label: '전체', emoji: '📍' },
-  { type: 'RESTAURANT', label: '맛집', emoji: '🍽️' },
-  { type: 'KIDS_PLAYGROUND', label: '아이 놀이터', emoji: '🎠' },
-  { type: 'RELAXATION', label: '아빠의 시간', emoji: '☕' },
-];
-
-const PERSONAL_FILTERS: { type: PlaceType; label: string; emoji: string }[] = [
-  { type: 'MY_FOOTPRINT', label: '나의 발자취', emoji: '👣' },
-  { type: 'RECOMMENDED_RESTAURANT', label: '추천 맛집', emoji: '🍴' },
-  { type: 'RECOMMENDED_SPOT', label: '추천 명소', emoji: '🏛️' },
-];
-
-const GRADES = [
-  { grade: 1, label: '최애' },
-  { grade: 2, label: '추천' },
-  { grade: 3, label: '무난' },
-];
-
-const PUBLIC_TYPES: PlaceType[] = ['RESTAURANT', 'KIDS_PLAYGROUND', 'RELAXATION'];
-const PERSONAL_TYPES: PlaceType[] = ['MY_FOOTPRINT', 'RECOMMENDED_RESTAURANT', 'RECOMMENDED_SPOT'];
-
 export default function FilterButtons({ selectedTypes, onTypeToggle, selectedGrades, onGradeChange, isAuthenticated }: FilterButtonsProps) {
   const [showGradeMenu, setShowGradeMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -40,15 +20,8 @@ export default function FilterButtons({ selectedTypes, onTypeToggle, selectedGra
   const isAllPublicSelected = PUBLIC_TYPES.every(t => selectedTypes.has(t));
 
   // 외부 클릭 시 메뉴 닫기
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setShowGradeMenu(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  const closeMenu = useCallback(() => setShowGradeMenu(false), []);
+  useClickOutside(menuRef, closeMenu);
 
   const toggleGrade = (grade: number) => {
     const newGrades = new Set(selectedGrades);
@@ -60,10 +33,10 @@ export default function FilterButtons({ selectedTypes, onTypeToggle, selectedGra
     onGradeChange(newGrades);
   };
 
-  const getGradeLabel = () => {
+  const getGradeLabelText = () => {
     if (selectedGrades.size === 3) return '전체';
     if (selectedGrades.size === 0) return '없음';
-    return GRADES.filter(g => selectedGrades.has(g.grade)).map(g => g.label).join(', ');
+    return GRADE_LABELS.filter(g => selectedGrades.has(g.grade)).map(g => g.label).join(', ');
   };
 
   // 필터가 기본값(1,2)이 아닌지 확인
@@ -164,7 +137,7 @@ export default function FilterButtons({ selectedTypes, onTypeToggle, selectedGra
           {showGradeMenu && (
             <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-xl border p-2 z-50 min-w-[120px]">
               <div className="text-xs text-gray-500 px-2 py-1 font-medium">등급 필터</div>
-              {GRADES.map(({ grade, label }) => (
+              {GRADE_LABELS.map(({ grade, label }) => (
                 <label
                   key={grade}
                   className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded cursor-pointer"

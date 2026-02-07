@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import KakaoMap from '@/components/KakaoMap';
 import PlaceDetail from '@/components/PlaceDetail';
 import PlaceForm, { PlaceFormData } from '@/components/PlaceForm';
@@ -11,18 +11,14 @@ import LoginModal from '@/components/LoginModal';
 import PlaceListPopup from '@/components/PlaceListPopup';
 import PlacePreviewCard from '@/components/PlacePreviewCard';
 import AboutModal from '@/components/AboutModal';
-import { mapApi, placeApi, authApi, isLoggedIn, clearToken } from '@/services/api';
-import { Marker, PlaceDetail as PlaceDetailType, PlaceType } from '@/types';
-
-const PUBLIC_TYPES: PlaceType[] = ['RESTAURANT', 'KIDS_PLAYGROUND', 'RELAXATION'];
-const PERSONAL_TYPES: PlaceType[] = ['MY_FOOTPRINT', 'RECOMMENDED_RESTAURANT', 'RECOMMENDED_SPOT'];
+import { mapApi, placeApi, authApi, isLoggedIn } from '@/services/api';
+import { Marker, PlaceDetail as PlaceDetailType } from '@/types';
+import { useMarkerFilter } from '@/hooks/useMarkerFilter';
 
 export default function Home() {
   const [markers, setMarkers] = useState<Marker[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<PlaceDetailType | null>(null);
   const [isLoadingPlace, setIsLoadingPlace] = useState(false);
-  const [selectedTypes, setSelectedTypes] = useState<Set<PlaceType>>(new Set(PUBLIC_TYPES));
-  const [selectedGrades, setSelectedGrades] = useState<Set<number>>(new Set([1, 2])); // 기본: 최애, 추천
   const [error, setError] = useState<string | null>(null);
   const [panelPosition, setPanelPosition] = useState<{ x: number; y: number } | null>(null);
   const [groupMarkers, setGroupMarkers] = useState<Marker[] | null>(null);
@@ -38,12 +34,23 @@ export default function Home() {
   const [loginError, setLoginError] = useState<string | undefined>();
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
+  // Marker filter hook
+  const {
+    filteredMarkers,
+    selectedTypes,
+    selectedGrades,
+    handleTypeToggle,
+    setSelectedGrades,
+    enableMyFootprint,
+    disablePersonalTypes,
+  } = useMarkerFilter({ markers, isAuthenticated });
+
   useEffect(() => {
     const loggedIn = isLoggedIn();
     setIsAuthenticated(loggedIn);
     // 로그인 상태면 "나의 발자취" 기본 활성화
     if (loggedIn) {
-      setSelectedTypes(prev => new Set([...prev, 'MY_FOOTPRINT']));
+      enableMyFootprint();
     }
 
     const handleAuthExpired = () => {
@@ -51,7 +58,7 @@ export default function Home() {
     };
     window.addEventListener('auth-expired', handleAuthExpired);
     return () => window.removeEventListener('auth-expired', handleAuthExpired);
-  }, []);
+  }, [enableMyFootprint]);
 
   useEffect(() => {
     const fetchMarkers = async () => {
@@ -67,18 +74,6 @@ export default function Home() {
 
     fetchMarkers();
   }, []);
-
-  // 타입 + 등급 필터링된 마커 (비로그인 시 개인 카테고리 숨김)
-  const filteredMarkers = useMemo(() => {
-    let result = markers;
-    if (!isAuthenticated) {
-      result = result.filter(m => !PERSONAL_TYPES.includes(m.type));
-    }
-    result = result.filter(m => selectedTypes.has(m.type));
-    if (selectedGrades.size === 0) return [];
-    if (selectedGrades.size === 3) return result;
-    return result.filter(m => m.grade && selectedGrades.has(m.grade));
-  }, [markers, selectedTypes, selectedGrades, isAuthenticated]);
 
   const handleMarkerClick = useCallback(async (markers: Marker[], position: { x: number; y: number }) => {
     if (markers.length > 1) {
@@ -236,69 +231,20 @@ export default function Home() {
       setIsAuthenticated(true);
       setShowLoginModal(false);
       // 로그인 시 "나의 발자취" 기본 활성화
-      setSelectedTypes(prev => new Set([...prev, 'MY_FOOTPRINT']));
+      enableMyFootprint();
     } catch (err) {
       setLoginError(err instanceof Error ? err.message : '로그인에 실패했습니다');
     } finally {
       setIsLoggingIn(false);
     }
-  }, []);
+  }, [enableMyFootprint]);
 
   const handleLogout = useCallback(() => {
     authApi.logout();
     setIsAuthenticated(false);
     // 로그아웃 시 개인 카테고리 선택 해제
-    setSelectedTypes(prev => {
-      const next = new Set(prev);
-      PERSONAL_TYPES.forEach(t => next.delete(t));
-      return next;
-    });
-  }, []);
-
-  const handleTypeToggle = useCallback((type: PlaceType | null) => {
-    setSelectedTypes(prev => {
-      const next = new Set(prev);
-
-      if (type === null) {
-        // "전체" 클릭: 토글 동작
-        const allPublicSelected = PUBLIC_TYPES.every(t => prev.has(t));
-        if (allPublicSelected) {
-          // 이미 전체 선택 상태 → 공개 3타입 모두 해제
-          PUBLIC_TYPES.forEach(t => next.delete(t));
-        } else {
-          // 전체가 아님 → 공개 3타입 전체 선택
-          PUBLIC_TYPES.forEach(t => next.add(t));
-        }
-        return next;
-      }
-
-      if (PERSONAL_TYPES.includes(type)) {
-        // 개인 타입: 독립 토글
-        if (next.has(type)) {
-          next.delete(type);
-        } else {
-          next.add(type);
-        }
-        return next;
-      }
-
-      // 공개 타입 클릭
-      const allPublicSelected = PUBLIC_TYPES.every(t => prev.has(t));
-      if (allPublicSelected) {
-        // 전체 상태에서 클릭 → 나머지 공개 타입 해제, 클릭한 것만
-        PUBLIC_TYPES.forEach(t => next.delete(t));
-        next.add(type);
-      } else {
-        // 개별 선택 상태 → 토글
-        if (next.has(type)) {
-          next.delete(type);
-        } else {
-          next.add(type);
-        }
-      }
-      return next;
-    });
-  }, []);
+    disablePersonalTypes();
+  }, [disablePersonalTypes]);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showAbout, setShowAbout] = useState(false);

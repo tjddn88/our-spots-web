@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { PlaceDetail as PlaceDetailType } from '@/types';
+import { PlaceDetail as PlaceDetailType, PlaceType } from '@/types';
+import { TYPE_CONFIG, getGradeLabel, PANEL_DIMENSIONS } from '@/constants/placeConfig';
 
 interface PlaceDetailProps {
   place: PlaceDetailType | null;
@@ -13,60 +14,20 @@ interface PlaceDetailProps {
   isAuthenticated: boolean;
 }
 
-const TYPE_LABELS = {
-  RESTAURANT: { label: '맛집', emoji: '🍽️', color: 'bg-red-100 text-red-700' },
-  KIDS_PLAYGROUND: { label: '아이 놀이터', emoji: '🎠', color: 'bg-green-100 text-green-700' },
-  RELAXATION: { label: '아빠의 시간', emoji: '☕', color: 'bg-blue-100 text-blue-700' },
-  MY_FOOTPRINT: { label: '나의 발자취', emoji: '👣', color: 'bg-purple-100 text-purple-700' },
-  RECOMMENDED_RESTAURANT: { label: '추천 맛집', emoji: '⭐', color: 'bg-orange-100 text-orange-700' },
-  RECOMMENDED_SPOT: { label: '추천 명소', emoji: '🏛️', color: 'bg-teal-100 text-teal-700' },
-};
-
-// 타입별 등급 라벨 및 색상
-const GRADE_CONFIG = {
-  RESTAURANT: {
-    1: { label: '🔥 찐맛집', color: 'bg-red-600 text-white' },
-    2: { label: '👌 괜찮은 곳', color: 'bg-red-400 text-white' },
-    3: { label: '🙂 무난한', color: 'bg-red-200 text-red-800' },
-  },
-  KIDS_PLAYGROUND: {
-    1: { label: '⭐ 하민 최애', color: 'bg-green-700 text-white' },
-    2: { label: '👍 하민 추천', color: 'bg-green-500 text-white' },
-    3: { label: '🙂 무난한', color: 'bg-lime-300 text-green-800' },
-  },
-  RELAXATION: {
-    1: { label: '⭐ 소중한 시간', color: 'bg-blue-900 text-white' },
-    2: { label: '👍 알찬 시간', color: 'bg-blue-500 text-white' },
-    3: { label: '🙂 무난한', color: 'bg-sky-200 text-blue-800' },
-  },
-  MY_FOOTPRINT: {
-    1: { label: '⭐ 특별한 곳', color: 'bg-purple-700 text-white' },
-    2: { label: '👍 좋은 곳', color: 'bg-purple-500 text-white' },
-    3: { label: '🙂 무난한', color: 'bg-purple-200 text-purple-800' },
-  },
-  RECOMMENDED_RESTAURANT: {
-    1: { label: '🔥 강추', color: 'bg-orange-700 text-white' },
-    2: { label: '👌 괜찮은 곳', color: 'bg-orange-500 text-white' },
-    3: { label: '🙂 무난한', color: 'bg-orange-200 text-orange-800' },
-  },
-  RECOMMENDED_SPOT: {
-    1: { label: '⭐ 꼭 가볼 곳', color: 'bg-teal-600 text-white' },
-    2: { label: '👍 가볼만한 곳', color: 'bg-teal-400 text-white' },
-    3: { label: '🙂 무난한', color: 'bg-teal-200 text-teal-800' },
-  },
-} as const;
-
-const getGradeLabel = (type: string, grade?: number) => {
-  const config = GRADE_CONFIG[type as keyof typeof GRADE_CONFIG];
-  if (config && grade && config[grade as keyof typeof config]) {
-    return config[grade as keyof typeof config];
-  }
-  const typeConfig = TYPE_LABELS[type as keyof typeof TYPE_LABELS];
-  return { label: typeConfig?.label || '장소', color: 'bg-gray-100 text-gray-800' };
-};
-
 export default function PlaceDetail({ place, isLoading, onClose, onEdit, onDelete, position, isAuthenticated }: PlaceDetailProps) {
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+
+  const handleCopyAddress = async () => {
+    if (!place?.address) return;
+    try {
+      await navigator.clipboard.writeText(place.address);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy address:', err);
+    }
+  };
 
   const handleEdit = () => {
     if (!place) return;
@@ -92,10 +53,7 @@ export default function PlaceDetail({ place, isLoading, onClose, onEdit, onDelet
 
   if ((!place && !isLoading) || !position) return null;
 
-  const panelWidth = 288; // w-72
-  const panelHeight = 320; // max-h-80
-  const headerHeight = 140; // 헤더 + 필터 영역
-  const padding = 16;
+  const { DETAIL_WIDTH: panelWidth, DETAIL_HEIGHT: panelHeight, HEADER_HEIGHT: headerHeight, MARGIN: padding } = PANEL_DIMENSIONS;
 
   let adjustedX = position.x;
   let adjustedY = position.y;
@@ -138,15 +96,15 @@ export default function PlaceDetail({ place, isLoading, onClose, onEdit, onDelet
               <>
                 <span className="text-sm font-bold">{place?.name}</span>
                 <div className="flex items-center gap-1.5 flex-wrap">
+                  {place?.type && TYPE_CONFIG[place.type] && (
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${TYPE_CONFIG[place.type].color}`}>
+                      {TYPE_CONFIG[place.type].emoji} {TYPE_CONFIG[place.type].label}
+                    </span>
+                  )}
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                    TYPE_LABELS[place?.type as keyof typeof TYPE_LABELS]?.color
+                    getGradeLabel(place?.type as PlaceType, place?.grade).color
                   }`}>
-                    {TYPE_LABELS[place?.type as keyof typeof TYPE_LABELS]?.emoji} {TYPE_LABELS[place?.type as keyof typeof TYPE_LABELS]?.label}
-                  </span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                    getGradeLabel(place?.type || '', place?.grade).color
-                  }`}>
-                    {getGradeLabel(place?.type || '', place?.grade).label}
+                    {getGradeLabel(place?.type as PlaceType, place?.grade).label}
                   </span>
                 </div>
               </>
@@ -178,7 +136,22 @@ export default function PlaceDetail({ place, isLoading, onClose, onEdit, onDelet
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                <span>{place.address}</span>
+                <span className="flex-1">{place.address}</span>
+                <button
+                  onClick={handleCopyAddress}
+                  className="p-1 hover:bg-gray-100 rounded transition-colors flex-shrink-0"
+                  aria-label="주소 복사"
+                >
+                  {isCopied ? (
+                    <svg className="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : (
+                    <svg className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  )}
+                </button>
               </div>
 
               {/* Review Links */}
