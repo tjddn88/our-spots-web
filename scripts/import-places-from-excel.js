@@ -22,7 +22,7 @@ if (fs.existsSync(envPath)) {
   });
 }
 
-const KAKAO_REST_API_KEY = '157e20da2dcc2a1ce196553f72cd72ca'; // REST API 키 (주소검색용)
+const KAKAO_REST_API_KEY = process.env.KAKAO_REST_API_KEY;
 const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8080';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 

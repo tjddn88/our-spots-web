@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 
-const SHARE_URL = 'http://ourspots.life';
+const SHARE_URL = 'https://ourspots.life';
 
 export default function ShareLinkButton() {
   const [copied, setCopied] = useState(false);
