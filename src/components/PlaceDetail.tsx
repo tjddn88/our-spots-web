@@ -139,7 +139,7 @@ export default function PlaceDetail({ place, isLoading, onClose, onEdit, onDelet
                 <span className="flex-1">{place.address}</span>
                 <button
                   onClick={handleCopyAddress}
-                  className="p-1 hover:bg-gray-100 rounded transition-colors flex-shrink-0"
+                  className="p-0.5 hover:bg-gray-100 rounded transition-colors flex-shrink-0"
                   aria-label="주소 복사"
                 >
                   {isCopied ? (

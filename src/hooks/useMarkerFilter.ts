@@ -44,10 +44,10 @@ export function useMarkerFilter({
     // 선택된 타입 필터
     result = result.filter(m => selectedTypes.has(m.type));
 
-    // 등급 필터
-    if (selectedGrades.size === 0) return [];
+    // 등급 필터 (공개 카테고리만 적용, 개인 카테고리는 항상 표시)
+    if (selectedGrades.size === 0) return result.filter(m => PERSONAL_TYPES.includes(m.type));
     if (selectedGrades.size === 3) return result;
-    return result.filter(m => m.grade && selectedGrades.has(m.grade));
+    return result.filter(m => PERSONAL_TYPES.includes(m.type) || (m.grade && selectedGrades.has(m.grade)));
   }, [markers, selectedTypes, selectedGrades, isAuthenticated]);
 
   // 타입 토글 핸들러

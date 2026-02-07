@@ -3,12 +3,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { useClickOutside } from '@/hooks/useClickOutside';
 
-declare global {
-  interface Window {
-    kakao: any;
-  }
-}
-
 interface SearchResult {
   place_name: string;
   address_name: string;
