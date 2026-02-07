@@ -9,7 +9,6 @@ export interface Place {
   latitude: number;
   longitude: number;
   description?: string;
-  imageUrl?: string;
   grade?: number;
   googlePlaceId?: string;
   googleRating?: number;
