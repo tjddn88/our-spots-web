@@ -62,7 +62,7 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
 
 export const authApi = {
   login: async (password: string): Promise<void> => {
-    const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+    const res = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password }),
@@ -85,29 +85,30 @@ export const authApi = {
 export const placeApi = {
   getAll: (type?: PlaceType) => {
     const params = type ? `?type=${type}` : '';
-    return fetchApi<Place[]>(`/api/places${params}`);
+    return fetchApi<Place[]>(`/places${params}`);
+
   },
 
   getById: (id: number) => {
-    return fetchApi<PlaceDetail>(`/api/places/${id}`);
+    return fetchApi<PlaceDetail>(`/places/${id}`);
   },
 
   create: (place: Omit<Place, 'id' | 'createdAt' | 'updatedAt'>) => {
-    return fetchApi<Place>('/api/places', {
+    return fetchApi<Place>('/places', {
       method: 'POST',
       body: JSON.stringify(place),
     });
   },
 
   update: (id: number, place: Partial<Place>) => {
-    return fetchApi<Place>(`/api/places/${id}`, {
+    return fetchApi<Place>(`/places/${id}`, {
       method: 'PUT',
       body: JSON.stringify(place),
     });
   },
 
   delete: (id: number) => {
-    return fetchApi<void>(`/api/places/${id}`, {
+    return fetchApi<void>(`/places/${id}`, {
       method: 'DELETE',
     });
   },
@@ -129,11 +130,11 @@ export const mapApi = {
     if (params?.neLng) searchParams.set('neLng', params.neLng.toString());
 
     const query = searchParams.toString();
-    return fetchApi<Marker[]>(`/api/map/markers${query ? `?${query}` : ''}`);
+    return fetchApi<Marker[]>(`/map/markers${query ? `?${query}` : ''}`);
   },
 
   refreshMarkers: () => {
-    return fetchApi<Marker[]>('/api/map/markers/refresh', {
+    return fetchApi<Marker[]>('/map/markers/refresh', {
       method: 'POST',
     });
   },
