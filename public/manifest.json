@@ -1,0 +1,21 @@
+{
+  "name": "하민이네 대동여지도",
+  "short_name": "OurSpots",
+  "description": "우리 가족이 함께 만드는 맛집, 놀이터, 추억의 지도",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f5f0",
+  "theme_color": "#f5f5f0",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
