@@ -28,6 +28,16 @@ export interface Marker {
   grade?: number;
 }
 
+export interface SearchResultPlace {
+  label: string;
+  name: string;
+  category: string;
+  address: string;
+  phone: string;
+  lat: number;
+  lng: number;
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;

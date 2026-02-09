@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { Marker } from '@/types';
+import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
+import { Marker, SearchResultPlace } from '@/types';
 import { MAP_ZOOM } from '@/constants/placeConfig';
 import { useKakaoSDK } from '@/hooks/useKakaoSDK';
-import { groupMarkersByCoord, createSingleMarkerHTML, createGroupMarkerHTML } from './markerUtils';
+import { groupMarkersByCoord, createSingleMarkerHTML, createGroupMarkerHTML, createSearchMarkerHTML } from './markerUtils';
 
 interface KakaoMapProps {
   markers: Marker[];
@@ -14,9 +14,15 @@ interface KakaoMapProps {
   zoom?: number;
   moveTo?: { lat: number; lng: number } | null;
   previewPosition?: { lat: number; lng: number } | null;
+  searchResults?: SearchResultPlace[];
+  onSearchMarkerClick?: (result: SearchResultPlace) => void;
 }
 
-export default function KakaoMap({
+export interface KakaoMapHandle {
+  getBounds: () => { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } } | null;
+}
+
+const KakaoMap = forwardRef<KakaoMapHandle, KakaoMapProps>(function KakaoMap({
   markers,
   onMarkerClick,
   onMapClick,
@@ -24,14 +30,31 @@ export default function KakaoMap({
   zoom = MAP_ZOOM.DEFAULT,
   moveTo,
   previewPosition,
-}: KakaoMapProps) {
+  searchResults = [],
+  onSearchMarkerClick,
+}, ref) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markerInstancesRef = useRef<any[]>([]);
+  const searchMarkerInstancesRef = useRef<any[]>([]);
   const previewPinRef = useRef<any>(null);
   const markerClickedRef = useRef(false);
   const [mapReady, setMapReady] = useState(false);
   const { isLoaded, error } = useKakaoSDK();
+
+  // Expose getBounds to parent
+  useImperativeHandle(ref, () => ({
+    getBounds: () => {
+      if (!mapInstanceRef.current) return null;
+      const bounds = mapInstanceRef.current.getBounds();
+      const sw = bounds.getSouthWest();
+      const ne = bounds.getNorthEast();
+      return {
+        sw: { lat: sw.getLat(), lng: sw.getLng() },
+        ne: { lat: ne.getLat(), lng: ne.getLng() },
+      };
+    },
+  }));
 
   // Create map
   useEffect(() => {
@@ -168,7 +191,7 @@ export default function KakaoMap({
     };
   }, [mapReady, onMapClick]);
 
-  // Render markers when map is ready
+  // Render registered markers
   useEffect(() => {
     if (!mapReady || !mapInstanceRef.current || !window.kakao?.maps) return;
 
@@ -211,6 +234,38 @@ export default function KakaoMap({
     });
   }, [mapReady, markers, onMarkerClick]);
 
+  // Render search result markers (A, B, C...)
+  useEffect(() => {
+    if (!mapReady || !mapInstanceRef.current || !window.kakao?.maps) return;
+
+    // Clear existing search markers
+    searchMarkerInstancesRef.current.forEach((marker) => marker.setMap(null));
+    searchMarkerInstancesRef.current = [];
+
+    searchResults.forEach((result) => {
+      const position = new window.kakao.maps.LatLng(result.lat, result.lng);
+
+      const content = document.createElement('div');
+      content.innerHTML = createSearchMarkerHTML(result.label);
+      content.style.cursor = 'pointer';
+      content.onclick = (e) => {
+        e.stopPropagation();
+        markerClickedRef.current = true;
+        onSearchMarkerClick?.(result);
+      };
+
+      const customOverlay = new window.kakao.maps.CustomOverlay({
+        position,
+        content,
+        yAnchor: 1,
+        xAnchor: 0.5,
+      });
+
+      customOverlay.setMap(mapInstanceRef.current);
+      searchMarkerInstancesRef.current.push(customOverlay);
+    });
+  }, [mapReady, searchResults, onSearchMarkerClick]);
+
   if (error) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-gray-100">
@@ -232,4 +287,6 @@ export default function KakaoMap({
   }
 
   return <div ref={mapRef} className="h-full w-full" />;
-}
+});
+
+export default KakaoMap;

@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import KakaoMap from '@/components/KakaoMap';
+import type { KakaoMapHandle } from '@/components/KakaoMap';
 import PlaceDetail from '@/components/PlaceDetail';
 import PlaceForm, { PlaceFormData } from '@/components/PlaceForm';
 import FilterButtons from '@/components/FilterButtons';
@@ -11,8 +12,9 @@ import LoginModal from '@/components/LoginModal';
 import PlaceListPopup from '@/components/PlaceListPopup';
 import PlacePreviewCard from '@/components/PlacePreviewCard';
 import AboutModal from '@/components/AboutModal';
+import SearchResultsPanel from '@/components/SearchResultsPanel';
 import { mapApi, placeApi, authApi, isLoggedIn } from '@/services/api';
-import { Marker, PlaceDetail as PlaceDetailType } from '@/types';
+import { Marker, PlaceDetail as PlaceDetailType, SearchResultPlace } from '@/types';
 import { useMarkerFilter } from '@/hooks/useMarkerFilter';
 
 export default function Home() {
@@ -27,6 +29,14 @@ export default function Home() {
   const [moveTo, setMoveTo] = useState<{ lat: number; lng: number } | null>(null);
   const [editingPlace, setEditingPlace] = useState<PlaceDetailType | null>(null);
   const [previewPlace, setPreviewPlace] = useState<{ lat: number; lng: number; address: string; name: string } | null>(null);
+
+  // Map search state
+  const [isMapSearchMode, setIsMapSearchMode] = useState(false);
+  const [searchResults, setSearchResults] = useState<SearchResultPlace[]>([]);
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const mapRef = useRef<KakaoMapHandle>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  const [headerHeight, setHeaderHeight] = useState(0);
 
   // Auth state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -59,6 +69,19 @@ export default function Home() {
     window.addEventListener('auth-expired', handleAuthExpired);
     return () => window.removeEventListener('auth-expired', handleAuthExpired);
   }, [enableMyFootprint]);
+
+  // 헤더 높이 측정 (SearchResultsPanel 위치용)
+  useEffect(() => {
+    if (!headerRef.current) return;
+    const observer = new ResizeObserver(() => {
+      if (headerRef.current) {
+        setHeaderHeight(headerRef.current.offsetHeight);
+      }
+    });
+    observer.observe(headerRef.current);
+    setHeaderHeight(headerRef.current.offsetHeight);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const fetchMarkers = async () => {
@@ -261,10 +284,50 @@ export default function Home() {
     }
   }, []);
 
+  // Map search handlers
+  const handleMapSearchResults = useCallback((results: SearchResultPlace[], keyword: string) => {
+    setSearchResults(results);
+    setSearchKeyword(keyword);
+    // 검색 시 다른 팝업 닫기
+    setSelectedPlace(null);
+    setPanelPosition(null);
+    setGroupMarkers(null);
+    setGroupPosition(null);
+    setPreviewPlace(null);
+  }, []);
+
+  const handleSearchResultSelect = useCallback((result: SearchResultPlace) => {
+    // 지도 이동 + 미리보기 카드 표시 (장소 등록 플로우)
+    setMoveTo({ lat: result.lat, lng: result.lng });
+    setPreviewPlace({
+      lat: result.lat,
+      lng: result.lng,
+      address: result.address,
+      name: result.name,
+    });
+    // 검색 결과 패널 닫기
+    setSearchResults([]);
+    setSearchKeyword('');
+    setSelectedPlace(null);
+    setPanelPosition(null);
+    setGroupMarkers(null);
+    setGroupPosition(null);
+  }, []);
+
+  const handleCloseSearchResults = useCallback(() => {
+    setSearchResults([]);
+    setSearchKeyword('');
+  }, []);
+
+  const getMapBounds = useCallback(() => {
+    return mapRef.current?.getBounds() ?? null;
+  }, []);
+
   return (
     <main className="relative h-dvh w-screen overflow-hidden">
       {/* Map */}
       <KakaoMap
+        ref={mapRef}
         markers={filteredMarkers}
         onMarkerClick={handleMarkerClick}
         onMapClick={handleMapClick}
@@ -272,10 +335,12 @@ export default function Home() {
         zoom={3}
         moveTo={moveTo}
         previewPosition={previewPlace ? { lat: previewPlace.lat, lng: previewPlace.lng } : null}
+        searchResults={searchResults}
+        onSearchMarkerClick={handleSearchResultSelect}
       />
 
       {/* Header */}
-      <header className="absolute top-0 left-0 right-0 z-10">
+      <header ref={headerRef} className="absolute top-0 left-0 right-0 z-10">
         {/* Title Bar */}
         <div className="bg-[#FDFBF7] border-b border-stone-200/60 shadow-sm">
           <div className="px-4 py-3 flex items-center justify-between">
@@ -300,9 +365,26 @@ export default function Home() {
             onGradeChange={setSelectedGrades}
             isAuthenticated={isAuthenticated}
           />
-          <AddressSearch onSelect={handleSearchSelect} />
+          <AddressSearch
+            onSelect={handleSearchSelect}
+            isMapSearchMode={isMapSearchMode}
+            onMapSearchToggle={setIsMapSearchMode}
+            onMapSearchResults={handleMapSearchResults}
+            getMapBounds={getMapBounds}
+          />
         </div>
       </header>
+
+      {/* Search Results Panel (현 지도 내 검색 결과) */}
+      {searchResults.length > 0 && (
+        <SearchResultsPanel
+          results={searchResults}
+          keyword={searchKeyword}
+          onSelect={handleSearchResultSelect}
+          onClose={handleCloseSearchResults}
+          headerHeight={headerHeight}
+        />
+      )}
 
       {/* Error message */}
       {error && (

@@ -68,6 +68,48 @@ export function createSingleMarkerHTML(marker: Marker): string {
   `;
 }
 
+// 검색 결과 라벨 마커 HTML 생성 (A, B, C...)
+export function createSearchMarkerHTML(label: string): string {
+  return `
+    <div style="
+      width: 36px;
+      height: 44px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+    ">
+      <div style="
+        width: 28px;
+        height: 28px;
+        background: #EA4335;
+        border: 2px solid white;
+        border-radius: 50% 50% 50% 0;
+        transform: rotate(-45deg);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">
+        <span style="
+          transform: rotate(45deg);
+          color: white;
+          font-size: 13px;
+          font-weight: bold;
+          line-height: 1;
+        ">${label}</span>
+      </div>
+      <div style="
+        width: 6px;
+        height: 6px;
+        background: rgba(0,0,0,0.2);
+        border-radius: 50%;
+        margin-top: 1px;
+      "></div>
+    </div>
+  `;
+}
+
 // 그룹 마커 HTML 생성
 export function createGroupMarkerHTML(count: number): string {
   return `

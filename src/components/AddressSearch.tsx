@@ -2,20 +2,33 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { useClickOutside } from '@/hooks/useClickOutside';
+import { SearchResultPlace } from '@/types';
 
 interface SearchResult {
   place_name: string;
   address_name: string;
   road_address_name?: string;
+  category_group_name?: string;
+  phone?: string;
   x: string; // longitude
   y: string; // latitude
 }
 
 interface AddressSearchProps {
   onSelect: (result: { lat: number; lng: number; address: string; name?: string }) => void;
+  isMapSearchMode: boolean;
+  onMapSearchToggle: (enabled: boolean) => void;
+  onMapSearchResults: (results: SearchResultPlace[], keyword: string) => void;
+  getMapBounds: () => { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } } | null;
 }
 
-export default function AddressSearch({ onSelect }: AddressSearchProps) {
+export default function AddressSearch({
+  onSelect,
+  isMapSearchMode,
+  onMapSearchToggle,
+  onMapSearchResults,
+  getMapBounds,
+}: AddressSearchProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -26,7 +39,56 @@ export default function AddressSearch({ onSelect }: AddressSearchProps) {
   const closeResults = useCallback(() => setShowResults(false), []);
   useClickOutside(searchRef, closeResults);
 
-  const handleSearch = () => {
+  const handleMapSearch = () => {
+    if (!query.trim() || !window.kakao?.maps?.services) return;
+
+    const bounds = getMapBounds();
+    if (!bounds) return;
+
+    setIsSearching(true);
+    const ps = new window.kakao.maps.services.Places();
+
+    // 현재 지도 영역으로 검색 제한 (카카오맵과 동일한 bounds 방식)
+    const kakaoBounds = new window.kakao.maps.LatLngBounds(
+      new window.kakao.maps.LatLng(bounds.sw.lat, bounds.sw.lng),
+      new window.kakao.maps.LatLng(bounds.ne.lat, bounds.ne.lng)
+    );
+
+    const searchOptions = {
+      bounds: kakaoBounds,
+      sort: window.kakao.maps.services.SortBy.ACCURACY,
+      size: 15,
+      page: 1,
+    };
+
+    ps.keywordSearch(
+      query,
+      (data: SearchResult[], status: any) => {
+        setIsSearching(false);
+
+        if (status === window.kakao.maps.services.Status.OK) {
+          onMapSearchResults(mapToResults(data), query.trim());
+        } else {
+          onMapSearchResults([], query.trim());
+        }
+      },
+      searchOptions
+    );
+  };
+
+  const mapToResults = (data: SearchResult[]): SearchResultPlace[] => {
+    return data.slice(0, 15).map((item, index) => ({
+      label: String.fromCharCode(65 + index),
+      name: item.place_name,
+      category: item.category_group_name || '',
+      address: item.road_address_name || item.address_name,
+      phone: item.phone || '',
+      lat: parseFloat(item.y),
+      lng: parseFloat(item.x),
+    }));
+  };
+
+  const handleNormalSearch = () => {
     if (!query.trim() || !window.kakao?.maps?.services) return;
 
     setIsSearching(true);
@@ -71,6 +133,14 @@ export default function AddressSearch({ onSelect }: AddressSearchProps) {
     });
   };
 
+  const handleSearch = () => {
+    if (isMapSearchMode) {
+      handleMapSearch();
+    } else {
+      handleNormalSearch();
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleSearch();
@@ -91,26 +161,37 @@ export default function AddressSearch({ onSelect }: AddressSearchProps) {
 
   return (
     <div ref={searchRef} className="relative">
-      <div className="flex gap-2">
+      <div className="flex gap-2 items-center">
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="주소 또는 장소 검색"
+          placeholder={isMapSearchMode ? '현 지도에서 장소 검색' : '주소 또는 장소 검색'}
           className="w-64 px-3 py-1.5 bg-white/90 backdrop-blur border rounded-full text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <button
           onClick={handleSearch}
           disabled={isSearching || !query.trim()}
-          className="px-3 py-1.5 bg-blue-500 text-white rounded-full text-xs font-medium shadow hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          className="px-3 py-1.5 bg-blue-500 text-white rounded-full text-xs font-medium shadow hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors shrink-0"
         >
           {isSearching ? '...' : '검색'}
         </button>
       </div>
 
-      {/* 검색 결과 */}
-      {showResults && results.length > 0 && (
+      {/* 현 지도 내 검색 토글 */}
+      <label className="inline-flex items-center gap-1.5 mt-1.5 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={isMapSearchMode}
+          onChange={(e) => onMapSearchToggle(e.target.checked)}
+          className="w-3 h-3 rounded border-gray-300 text-blue-500 focus:ring-blue-500 focus:ring-1 cursor-pointer"
+        />
+        <span className="text-[11px] text-gray-500">현 지도 내 장소검색</span>
+      </label>
+
+      {/* 일반 검색 결과 (토글 OFF일 때만) */}
+      {!isMapSearchMode && showResults && results.length > 0 && (
         <div className="absolute top-full left-0 mt-1 w-80 bg-white rounded-lg shadow-xl border overflow-hidden z-50">
           {results.map((result, index) => (
             <button
@@ -127,7 +208,7 @@ export default function AddressSearch({ onSelect }: AddressSearchProps) {
         </div>
       )}
 
-      {showResults && results.length === 0 && !isSearching && (
+      {!isMapSearchMode && showResults && results.length === 0 && !isSearching && (
         <div className="absolute top-full left-0 mt-1 w-80 bg-white rounded-lg shadow-xl border p-3 text-sm text-gray-500 z-50">
           검색 결과가 없습니다
         </div>
