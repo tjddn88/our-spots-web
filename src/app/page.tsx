@@ -268,7 +268,7 @@ export default function Home() {
         markers={filteredMarkers}
         onMarkerClick={handleMarkerClick}
         onMapClick={handleMapClick}
-        center={{ lat: 37.5665, lng: 126.978 }}
+        center={{ lat: 37.5716, lng: 126.9768 }}
         zoom={3}
         moveTo={moveTo}
         previewPosition={previewPlace ? { lat: previewPlace.lat, lng: previewPlace.lng } : null}
