@@ -16,10 +16,12 @@ interface KakaoMapProps {
   previewPosition?: { lat: number; lng: number } | null;
   searchResults?: SearchResultPlace[];
   onSearchMarkerClick?: (result: SearchResultPlace) => void;
+  onMapMoved?: () => void;
 }
 
 export interface KakaoMapHandle {
   getBounds: () => { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } } | null;
+  getCenter: () => { lat: number; lng: number } | null;
 }
 
 const KakaoMap = forwardRef<KakaoMapHandle, KakaoMapProps>(function KakaoMap({
@@ -32,6 +34,7 @@ const KakaoMap = forwardRef<KakaoMapHandle, KakaoMapProps>(function KakaoMap({
   previewPosition,
   searchResults = [],
   onSearchMarkerClick,
+  onMapMoved,
 }, ref) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
@@ -39,10 +42,12 @@ const KakaoMap = forwardRef<KakaoMapHandle, KakaoMapProps>(function KakaoMap({
   const searchMarkerInstancesRef = useRef<any[]>([]);
   const previewPinRef = useRef<any>(null);
   const markerClickedRef = useRef(false);
+  const programmaticMoveRef = useRef(false);
+  const onMapMovedRef = useRef(onMapMoved);
+  onMapMovedRef.current = onMapMoved;
   const [mapReady, setMapReady] = useState(false);
   const { isLoaded, error } = useKakaoSDK();
 
-  // Expose getBounds to parent
   useImperativeHandle(ref, () => ({
     getBounds: () => {
       if (!mapInstanceRef.current) return null;
@@ -53,6 +58,11 @@ const KakaoMap = forwardRef<KakaoMapHandle, KakaoMapProps>(function KakaoMap({
         sw: { lat: sw.getLat(), lng: sw.getLng() },
         ne: { lat: ne.getLat(), lng: ne.getLng() },
       };
+    },
+    getCenter: () => {
+      if (!mapInstanceRef.current) return null;
+      const center = mapInstanceRef.current.getCenter();
+      return { lat: center.getLat(), lng: center.getLng() };
     },
   }));
 
@@ -76,9 +86,11 @@ const KakaoMap = forwardRef<KakaoMapHandle, KakaoMapProps>(function KakaoMap({
   useEffect(() => {
     if (!mapReady || !mapInstanceRef.current || !moveTo) return;
 
+    programmaticMoveRef.current = true;
     const moveLatLng = new window.kakao.maps.LatLng(moveTo.lat, moveTo.lng);
     mapInstanceRef.current.setCenter(moveLatLng);
     mapInstanceRef.current.setLevel(MAP_ZOOM.ON_MOVE);
+    setTimeout(() => { programmaticMoveRef.current = false; }, 500);
   }, [mapReady, moveTo]);
 
   // Preview pin
@@ -190,6 +202,32 @@ const KakaoMap = forwardRef<KakaoMapHandle, KakaoMapProps>(function KakaoMap({
       window.kakao.maps.event.removeListener(mapInstanceRef.current, 'click', clickHandler);
     };
   }, [mapReady, onMapClick]);
+
+  // Map moved events (dragend, zoom_changed) — 사용자 조작 시만
+  useEffect(() => {
+    if (!mapReady || !mapInstanceRef.current) return;
+
+    let timer: ReturnType<typeof setTimeout>;
+
+    const handleMoved = () => {
+      if (programmaticMoveRef.current) return;
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        onMapMovedRef.current?.();
+      }, 300);
+    };
+
+    window.kakao.maps.event.addListener(mapInstanceRef.current, 'dragend', handleMoved);
+    window.kakao.maps.event.addListener(mapInstanceRef.current, 'zoom_changed', handleMoved);
+
+    return () => {
+      clearTimeout(timer);
+      if (mapInstanceRef.current) {
+        window.kakao.maps.event.removeListener(mapInstanceRef.current, 'dragend', handleMoved);
+        window.kakao.maps.event.removeListener(mapInstanceRef.current, 'zoom_changed', handleMoved);
+      }
+    };
+  }, [mapReady]);
 
   // Render registered markers
   useEffect(() => {

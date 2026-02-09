@@ -31,12 +31,17 @@ export default function Home() {
   const [previewPlace, setPreviewPlace] = useState<{ lat: number; lng: number; address: string; name: string } | null>(null);
 
   // Map search state
-  const [isMapSearchMode, setIsMapSearchMode] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResultPlace[]>([]);
   const [searchKeyword, setSearchKeyword] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [showResearchButton, setShowResearchButton] = useState(false);
+  const [searchToast, setSearchToast] = useState<string | null>(null);
   const mapRef = useRef<KakaoMapHandle>(null);
   const headerRef = useRef<HTMLElement>(null);
   const [headerHeight, setHeaderHeight] = useState(0);
+  const searchKeywordRef = useRef('');
+  const lastSearchCenterRef = useRef<{ lat: number; lng: number } | null>(null);
+  searchKeywordRef.current = searchKeyword;
 
   // Auth state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -192,19 +197,96 @@ export default function Home() {
     setMarkers(prev => prev.filter(m => m.id !== placeId));
   }, []);
 
-  const handleSearchSelect = useCallback((result: { lat: number; lng: number; address: string; name?: string }) => {
-    // 맵 이동 + 미리보기 카드 표시
-    setMoveTo({ lat: result.lat, lng: result.lng });
-    setPreviewPlace({
-      lat: result.lat,
-      lng: result.lng,
-      address: result.address,
-      name: result.name || result.address,
-    });
-    setSelectedPlace(null);
-    setPanelPosition(null);
-    setGroupMarkers(null);
-    setGroupPosition(null);
+  // 지도 내 장소 검색 (카카오 keywordSearch + rect + center)
+  const performMapSearch = useCallback((keyword: string) => {
+    if (!keyword.trim() || !window.kakao?.maps?.services) return;
+
+    const bounds = mapRef.current?.getBounds();
+    const center = mapRef.current?.getCenter();
+    if (!bounds) return;
+
+    setIsSearching(true);
+    setShowResearchButton(false);
+
+    const ps = new window.kakao.maps.services.Places();
+
+    // rect: 사각형 범위 제한 (sw_lng, sw_lat, ne_lng, ne_lat)
+    const rect = `${bounds.sw.lng},${bounds.sw.lat},${bounds.ne.lng},${bounds.ne.lat}`;
+
+    const baseOptions: any = {
+      rect,
+      size: 15,
+    };
+
+    // 중심 좌표 전달 → 거리순 정렬로 근처 장소 우선
+    if (center) {
+      baseOptions.x = String(center.lng);
+      baseOptions.y = String(center.lat);
+      baseOptions.sort = window.kakao.maps.services.SortBy.DISTANCE;
+    }
+
+    const processResults = (allData: any[]) => {
+      setIsSearching(false);
+
+      if (center) {
+        lastSearchCenterRef.current = center;
+      }
+
+      if (allData.length > 0) {
+        // 중복 제거 (place_name + x + y 기준)
+        const seen = new Set<string>();
+        const unique = allData.filter((item: any) => {
+          const key = `${item.place_name}_${item.x}_${item.y}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+
+        const results: SearchResultPlace[] = unique.slice(0, 15).map((item: any, index: number) => ({
+          label: String.fromCharCode(65 + index),
+          name: item.place_name,
+          category: item.category_group_name || '',
+          address: item.road_address_name || item.address_name,
+          phone: item.phone || '',
+          lat: parseFloat(item.y),
+          lng: parseFloat(item.x),
+        }));
+        setSearchResults(results);
+        setSearchKeyword(keyword);
+        setSelectedPlace(null);
+        setPanelPosition(null);
+        setGroupMarkers(null);
+        setGroupPosition(null);
+        setPreviewPlace(null);
+      } else {
+        setSearchResults([]);
+        setSearchKeyword(keyword);
+        setSearchToast('검색 결과가 없습니다');
+        setTimeout(() => setSearchToast(null), 2000);
+      }
+    };
+
+    // 1페이지 검색 후, 결과가 15개 이상이면 2페이지도 조회
+    ps.keywordSearch(
+      keyword,
+      (data1: any[], status1: any) => {
+        const page1 = status1 === window.kakao.maps.services.Status.OK ? data1 : [];
+
+        if (page1.length >= 15) {
+          ps.keywordSearch(
+            keyword,
+            (data2: any[], status2: any) => {
+              const page2 = status2 === window.kakao.maps.services.Status.OK ? data2 : [];
+              processResults([...page1, ...page2]);
+            },
+            { ...baseOptions, page: 2 }
+          );
+        } else {
+          processResults(page1);
+        }
+      },
+      { ...baseOptions, page: 1 }
+    );
   }, []);
 
   const handlePreviewRegister = useCallback(() => {
@@ -284,20 +366,39 @@ export default function Home() {
     }
   }, []);
 
-  // Map search handlers
-  const handleMapSearchResults = useCallback((results: SearchResultPlace[], keyword: string) => {
-    setSearchResults(results);
-    setSearchKeyword(keyword);
-    // 검색 시 다른 팝업 닫기
-    setSelectedPlace(null);
-    setPanelPosition(null);
-    setGroupMarkers(null);
-    setGroupPosition(null);
-    setPreviewPlace(null);
+  // 검색 실행 (AddressSearch에서 호출)
+  const handleSearch = useCallback((keyword: string) => {
+    performMapSearch(keyword);
+  }, [performMapSearch]);
+
+  // 지도 이동 시 재검색 버튼 표시
+  const handleMapMoved = useCallback(() => {
+    if (!searchKeywordRef.current) return;
+
+    const currentCenter = mapRef.current?.getCenter();
+    const lastCenter = lastSearchCenterRef.current;
+
+    if (!lastCenter) {
+      setShowResearchButton(true);
+      return;
+    }
+
+    if (currentCenter) {
+      const dLat = currentCenter.lat - lastCenter.lat;
+      const dLng = currentCenter.lng - lastCenter.lng;
+      const dist = Math.sqrt(dLat * dLat + dLng * dLng);
+      if (dist > 0.002) {
+        setShowResearchButton(true);
+      }
+    }
   }, []);
 
+  // 플로팅 버튼 클릭 (현 지도에서 재검색)
+  const handleResearch = useCallback(() => {
+    performMapSearch(searchKeywordRef.current);
+  }, [performMapSearch]);
+
   const handleSearchResultSelect = useCallback((result: SearchResultPlace) => {
-    // 지도 이동 + 미리보기 카드 표시 (장소 등록 플로우)
     setMoveTo({ lat: result.lat, lng: result.lng });
     setPreviewPlace({
       lat: result.lat,
@@ -305,9 +406,8 @@ export default function Home() {
       address: result.address,
       name: result.name,
     });
-    // 검색 결과 패널 닫기
+    // 패널 닫되 키워드는 유지 (지도 이동 시 재검색 버튼용)
     setSearchResults([]);
-    setSearchKeyword('');
     setSelectedPlace(null);
     setPanelPosition(null);
     setGroupMarkers(null);
@@ -317,10 +417,8 @@ export default function Home() {
   const handleCloseSearchResults = useCallback(() => {
     setSearchResults([]);
     setSearchKeyword('');
-  }, []);
-
-  const getMapBounds = useCallback(() => {
-    return mapRef.current?.getBounds() ?? null;
+    setShowResearchButton(false);
+    lastSearchCenterRef.current = null;
   }, []);
 
   return (
@@ -337,6 +435,7 @@ export default function Home() {
         previewPosition={previewPlace ? { lat: previewPlace.lat, lng: previewPlace.lng } : null}
         searchResults={searchResults}
         onSearchMarkerClick={handleSearchResultSelect}
+        onMapMoved={handleMapMoved}
       />
 
       {/* Header */}
@@ -366,14 +465,38 @@ export default function Home() {
             isAuthenticated={isAuthenticated}
           />
           <AddressSearch
-            onSelect={handleSearchSelect}
-            isMapSearchMode={isMapSearchMode}
-            onMapSearchToggle={setIsMapSearchMode}
-            onMapSearchResults={handleMapSearchResults}
-            getMapBounds={getMapBounds}
+            onSearch={handleSearch}
+            isSearching={isSearching}
           />
         </div>
       </header>
+
+      {/* 플로팅 "현 지도에서 검색" 버튼 */}
+      <button
+        onClick={handleResearch}
+        style={{ top: `${headerHeight + 12}px` }}
+        className={`absolute -translate-x-1/2 z-20 bg-white border border-blue-400 text-blue-600 px-4 py-2 rounded-full text-sm font-medium shadow-lg hover:bg-blue-50 active:bg-blue-100 transition-all duration-300 ${
+          showResearchButton && searchKeyword
+            ? 'opacity-100 translate-y-0'
+            : 'opacity-0 -translate-y-2 pointer-events-none'
+        } ${
+          searchResults.length > 0
+            ? 'left-1/2 sm:left-[calc(50%+10rem)]'
+            : 'left-1/2'
+        }`}
+      >
+        ↻ 현 지도에서 검색
+      </button>
+
+      {/* 검색 결과 없음 토스트 */}
+      {searchToast && (
+        <div
+          className="absolute left-1/2 -translate-x-1/2 z-30 bg-gray-800/90 text-white px-4 py-2 rounded-full text-sm shadow-lg"
+          style={{ top: `${headerHeight + 12}px` }}
+        >
+          {searchToast}
+        </div>
+      )}
 
       {/* Search Results Panel (현 지도 내 검색 결과) */}
       {searchResults.length > 0 && (

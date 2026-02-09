@@ -41,13 +41,15 @@ export default function SearchResultsPanel({
     setIsDragging(false);
 
     const sheetHeight = sheetRef.current?.offsetHeight || 0;
-    // 80% 이상 내리면 닫기, 아니면 원위치
     if (translateY > sheetHeight * 0.8) {
+      // 80% 이상 내리면 닫기
       onClose();
       setTranslateY(0);
-    } else {
+    } else if (translateY < 15) {
+      // 거의 안 움직였으면 원위치
       setTranslateY(0);
     }
+    // 그 외에는 현재 위치 고정 (드래그한 만큼 내려간 상태 유지)
   }, [isDragging, translateY, onClose]);
 
   return (
