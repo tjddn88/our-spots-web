@@ -349,6 +349,13 @@ export default function Home() {
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
+  const [showAboutBadge, setShowAboutBadge] = useState(false);
+
+  useEffect(() => {
+    if (!localStorage.getItem('about-seen')) {
+      setShowAboutBadge(true);
+    }
+  }, []);
 
   const handleRefreshMarkers = useCallback(async () => {
     setIsRefreshing(true);
@@ -453,16 +460,16 @@ export default function Home() {
       {/* Header */}
       <header ref={headerRef} className="absolute top-0 left-0 right-0 z-10">
         {/* Title Bar */}
-        <div className="bg-[#FDFBF7] border-b border-stone-200/60 shadow-sm">
-          <div className="px-4 py-3 flex items-center justify-between">
+        <div className="bg-white border-b border-gray-100 shadow-sm">
+          <div className="px-4 py-2.5 flex items-center gap-2">
+            <svg className="w-5 h-5 text-red-500 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+            </svg>
             <h1
-              className="text-lg sm:text-xl font-semibold tracking-tight"
-              style={{
-                fontFamily: 'var(--font-noto-serif-kr), serif',
-                color: '#3D3229'
-              }}
+              className="text-lg sm:text-xl font-bold tracking-tight text-[#1E293B]"
+              style={{ fontFamily: 'var(--font-geist-sans), sans-serif' }}
             >
-              하민이네 대동여지도
+              Our<span className="font-light">Spots</span>
             </h1>
           </div>
         </div>
@@ -643,13 +650,16 @@ export default function Home() {
         </button>
         <ShareLinkButton />
         <button
-          onClick={() => setShowAbout(true)}
-          className="bg-white/90 backdrop-blur p-2.5 rounded-full shadow-lg hover:bg-white transition-colors"
+          onClick={() => { setShowAbout(true); setShowAboutBadge(false); localStorage.setItem('about-seen', '1'); }}
+          className="relative bg-white/90 backdrop-blur p-2.5 rounded-full shadow-lg hover:bg-white transition-colors"
           title="프로젝트 소개"
         >
           <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
           </svg>
+          {showAboutBadge && (
+            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
+          )}
         </button>
       </div>
 

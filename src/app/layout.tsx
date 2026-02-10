@@ -28,8 +28,8 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "하민이네 대동여지도",
-  description: "우리 가족이 함께 만드는 맛집, 놀이터, 추억의 지도",
+  title: "OurSpots",
+  description: "우리가 함께 만드는 장소 지도",
   icons: {
     icon: "/favicon.ico",
     apple: "/apple-touch-icon.png",
