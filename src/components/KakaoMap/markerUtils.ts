@@ -80,8 +80,8 @@ export function createSearchMarkerHTML(label: string): string {
       cursor: pointer;
     ">
       <div style="
-        width: 28px;
-        height: 28px;
+        width: 24px;
+        height: 24px;
         background: #EA4335;
         border: 2px solid white;
         border-radius: 50% 50% 50% 0;
@@ -94,7 +94,7 @@ export function createSearchMarkerHTML(label: string): string {
         <span style="
           transform: rotate(45deg);
           color: white;
-          font-size: 13px;
+          font-size: 11px;
           font-weight: bold;
           line-height: 1;
         ">${label}</span>

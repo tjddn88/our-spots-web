@@ -33,7 +33,6 @@ export default function Home() {
   // Map search state
   const [searchResults, setSearchResults] = useState<SearchResultPlace[]>([]);
   const [searchKeyword, setSearchKeyword] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
   const [showResearchButton, setShowResearchButton] = useState(false);
   const [searchToast, setSearchToast] = useState<string | null>(null);
   const mapRef = useRef<KakaoMapHandle>(null);
@@ -205,7 +204,6 @@ export default function Home() {
     const center = mapRef.current?.getCenter();
     if (!bounds) return;
 
-    setIsSearching(true);
     setShowResearchButton(false);
 
     const ps = new window.kakao.maps.services.Places();
@@ -226,8 +224,6 @@ export default function Home() {
     }
 
     const processResults = (allData: any[]) => {
-      setIsSearching(false);
-
       if (center) {
         lastSearchCenterRef.current = center;
       }
@@ -366,10 +362,26 @@ export default function Home() {
     }
   }, []);
 
-  // 검색 실행 (AddressSearch에서 호출)
-  const handleSearch = useCallback((keyword: string) => {
-    performMapSearch(keyword);
-  }, [performMapSearch]);
+  // 일반 검색 결과 선택 (드롭다운 → 미리보기)
+  const handleSearchSelect = useCallback((result: { lat: number; lng: number; address: string; name?: string }) => {
+    setMoveTo({ lat: result.lat, lng: result.lng });
+    setPreviewPlace({
+      lat: result.lat,
+      lng: result.lng,
+      address: result.address,
+      name: result.name || result.address,
+    });
+    setSelectedPlace(null);
+    setPanelPosition(null);
+    setGroupMarkers(null);
+    setGroupPosition(null);
+  }, []);
+
+  // 검색 키워드 저장 (플로팅 재검색 버튼용)
+  const handleSearchKeyword = useCallback((keyword: string) => {
+    setSearchKeyword(keyword);
+    searchKeywordRef.current = keyword;
+  }, []);
 
   // 지도 이동 시 재검색 버튼 표시
   const handleMapMoved = useCallback(() => {
@@ -465,8 +477,8 @@ export default function Home() {
             isAuthenticated={isAuthenticated}
           />
           <AddressSearch
-            onSearch={handleSearch}
-            isSearching={isSearching}
+            onSelect={handleSearchSelect}
+            onSearchKeyword={handleSearchKeyword}
           />
         </div>
       </header>
