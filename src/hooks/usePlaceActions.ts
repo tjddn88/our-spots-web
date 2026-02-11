@@ -1,0 +1,206 @@
+import { useState, useCallback } from 'react';
+import { mapApi, placeApi } from '@/services/api';
+import { Marker, PlaceDetail as PlaceDetailType } from '@/types';
+import { PlaceFormData } from '@/components/PlaceForm';
+
+interface UsePlaceActionsOptions {
+  setMarkers: React.Dispatch<React.SetStateAction<Marker[]>>;
+  setMoveTo: (moveTo: { lat: number; lng: number } | null) => void;
+}
+
+interface UsePlaceActionsReturn {
+  selectedPlace: PlaceDetailType | null;
+  isLoadingPlace: boolean;
+  panelPosition: { x: number; y: number } | null;
+  groupMarkers: Marker[] | null;
+  groupPosition: { x: number; y: number } | null;
+  newPlaceCoords: { lat: number; lng: number; address?: string; name?: string } | null;
+  editingPlace: PlaceDetailType | null;
+  previewPlace: { lat: number; lng: number; address: string; name: string } | null;
+  setPreviewPlace: (place: { lat: number; lng: number; address: string; name: string } | null) => void;
+  handleMarkerClick: (markers: Marker[], position: { x: number; y: number }) => void;
+  handleGroupMarkerSelect: (marker: Marker) => void;
+  handleCloseGroupPopup: () => void;
+  handleCloseDetail: () => void;
+  handleMapClick: () => void;
+  handleCreatePlace: (data: PlaceFormData) => Promise<void>;
+  handleUpdatePlace: (data: PlaceFormData) => Promise<void>;
+  handleDeletePlace: (placeId: number) => Promise<void>;
+  handleEditPlace: (place: PlaceDetailType) => void;
+  handleCloseForm: () => void;
+  handlePreviewRegister: () => void;
+  handlePreviewClose: () => void;
+  handleSearchSelect: (result: { lat: number; lng: number; address: string; name?: string }) => void;
+  clearPanels: () => void;
+  clearDetailPanels: () => void;
+}
+
+export function usePlaceActions({
+  setMarkers,
+  setMoveTo,
+}: UsePlaceActionsOptions): UsePlaceActionsReturn {
+  const [selectedPlace, setSelectedPlace] = useState<PlaceDetailType | null>(null);
+  const [isLoadingPlace, setIsLoadingPlace] = useState(false);
+  const [panelPosition, setPanelPosition] = useState<{ x: number; y: number } | null>(null);
+  const [groupMarkers, setGroupMarkers] = useState<Marker[] | null>(null);
+  const [groupPosition, setGroupPosition] = useState<{ x: number; y: number } | null>(null);
+  const [newPlaceCoords, setNewPlaceCoords] = useState<{ lat: number; lng: number; address?: string; name?: string } | null>(null);
+  const [editingPlace, setEditingPlace] = useState<PlaceDetailType | null>(null);
+  const [previewPlace, setPreviewPlace] = useState<{ lat: number; lng: number; address: string; name: string } | null>(null);
+
+  const clearDetailPanels = useCallback(() => {
+    setSelectedPlace(null);
+    setPanelPosition(null);
+    setGroupMarkers(null);
+    setGroupPosition(null);
+  }, []);
+
+  const clearPanels = useCallback(() => {
+    clearDetailPanels();
+    setPreviewPlace(null);
+  }, [clearDetailPanels]);
+
+  const handleMarkerClick = useCallback(async (markers: Marker[], position: { x: number; y: number }) => {
+    if (markers.length > 1) {
+      setGroupMarkers(markers);
+      setGroupPosition(position);
+      setSelectedPlace(null);
+      setPanelPosition(null);
+    } else {
+      setGroupMarkers(null);
+      setGroupPosition(null);
+      setPanelPosition(position);
+      setIsLoadingPlace(true);
+      try {
+        const place = await placeApi.getById(markers[0].id);
+        setSelectedPlace(place);
+      } catch (err) {
+        console.error('Failed to fetch place detail:', err);
+      } finally {
+        setIsLoadingPlace(false);
+      }
+    }
+  }, []);
+
+  const handleGroupMarkerSelect = useCallback(async (marker: Marker) => {
+    setGroupMarkers(null);
+    setGroupPosition(null);
+    setPanelPosition(groupPosition);
+    setIsLoadingPlace(true);
+    try {
+      const place = await placeApi.getById(marker.id);
+      setSelectedPlace(place);
+    } catch (err) {
+      console.error('Failed to fetch place detail:', err);
+    } finally {
+      setIsLoadingPlace(false);
+    }
+  }, [groupPosition]);
+
+  const handleCloseGroupPopup = useCallback(() => {
+    setGroupMarkers(null);
+    setGroupPosition(null);
+  }, []);
+
+  const handleCloseDetail = useCallback(() => {
+    setSelectedPlace(null);
+    setPanelPosition(null);
+  }, []);
+
+  const handleMapClick = useCallback(() => {
+    setSelectedPlace(null);
+    setPanelPosition(null);
+    setGroupMarkers(null);
+    setGroupPosition(null);
+    setPreviewPlace(null);
+  }, []);
+
+  const handleCreatePlace = useCallback(async (data: PlaceFormData) => {
+    await placeApi.create(data);
+    setNewPlaceCoords(null);
+    const newMarkers = await mapApi.getMarkers();
+    setMarkers(newMarkers);
+  }, [setMarkers]);
+
+  const handleCloseForm = useCallback(() => {
+    setNewPlaceCoords(null);
+    setEditingPlace(null);
+  }, []);
+
+  const handleEditPlace = useCallback((place: PlaceDetailType) => {
+    setEditingPlace(place);
+    setSelectedPlace(null);
+    setPanelPosition(null);
+  }, []);
+
+  const handleUpdatePlace = useCallback(async (data: PlaceFormData) => {
+    if (!editingPlace) return;
+    await placeApi.update(editingPlace.id, data);
+    setEditingPlace(null);
+    const newMarkers = await mapApi.getMarkers();
+    setMarkers(newMarkers);
+  }, [editingPlace, setMarkers]);
+
+  const handleDeletePlace = useCallback(async (placeId: number) => {
+    await placeApi.delete(placeId);
+    setSelectedPlace(null);
+    setPanelPosition(null);
+    setMarkers(prev => prev.filter(m => m.id !== placeId));
+  }, [setMarkers]);
+
+  const handlePreviewRegister = useCallback(() => {
+    if (!previewPlace) return;
+    setNewPlaceCoords({
+      lat: previewPlace.lat,
+      lng: previewPlace.lng,
+      address: previewPlace.address,
+      name: previewPlace.name,
+    });
+    setPreviewPlace(null);
+  }, [previewPlace]);
+
+  const handlePreviewClose = useCallback(() => {
+    setPreviewPlace(null);
+  }, []);
+
+  const handleSearchSelect = useCallback((result: { lat: number; lng: number; address: string; name?: string }) => {
+    setMoveTo({ lat: result.lat, lng: result.lng });
+    setPreviewPlace({
+      lat: result.lat,
+      lng: result.lng,
+      address: result.address,
+      name: result.name || result.address,
+    });
+    setSelectedPlace(null);
+    setPanelPosition(null);
+    setGroupMarkers(null);
+    setGroupPosition(null);
+  }, [setMoveTo]);
+
+  return {
+    selectedPlace,
+    isLoadingPlace,
+    panelPosition,
+    groupMarkers,
+    groupPosition,
+    newPlaceCoords,
+    editingPlace,
+    previewPlace,
+    setPreviewPlace,
+    handleMarkerClick,
+    handleGroupMarkerSelect,
+    handleCloseGroupPopup,
+    handleCloseDetail,
+    handleMapClick,
+    handleCreatePlace,
+    handleUpdatePlace,
+    handleDeletePlace,
+    handleEditPlace,
+    handleCloseForm,
+    handlePreviewRegister,
+    handlePreviewClose,
+    handleSearchSelect,
+    clearPanels,
+    clearDetailPanels,
+  };
+}

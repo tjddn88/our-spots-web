@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import KakaoMap from '@/components/KakaoMap';
 import type { KakaoMapHandle } from '@/components/KakaoMap';
 import PlaceDetail from '@/components/PlaceDetail';
-import PlaceForm, { PlaceFormData } from '@/components/PlaceForm';
+import PlaceForm from '@/components/PlaceForm';
 import FilterButtons from '@/components/FilterButtons';
 import AddressSearch from '@/components/AddressSearch';
 import ShareLinkButton from '@/components/ShareLinkButton';
@@ -13,40 +13,32 @@ import PlaceListPopup from '@/components/PlaceListPopup';
 import PlacePreviewCard from '@/components/PlacePreviewCard';
 import AboutModal from '@/components/AboutModal';
 import SearchResultsPanel from '@/components/SearchResultsPanel';
-import { mapApi, placeApi, authApi, isLoggedIn } from '@/services/api';
-import { Marker, PlaceDetail as PlaceDetailType, SearchResultPlace } from '@/types';
+import { mapApi } from '@/services/api';
+import { Marker } from '@/types';
 import { useMarkerFilter } from '@/hooks/useMarkerFilter';
+import { useAuth } from '@/hooks/useAuth';
+import { usePlaceActions } from '@/hooks/usePlaceActions';
+import { useMapSearch } from '@/hooks/useMapSearch';
 
 export default function Home() {
   const [markers, setMarkers] = useState<Marker[]>([]);
-  const [selectedPlace, setSelectedPlace] = useState<PlaceDetailType | null>(null);
-  const [isLoadingPlace, setIsLoadingPlace] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [panelPosition, setPanelPosition] = useState<{ x: number; y: number } | null>(null);
-  const [groupMarkers, setGroupMarkers] = useState<Marker[] | null>(null);
-  const [groupPosition, setGroupPosition] = useState<{ x: number; y: number } | null>(null);
-  const [newPlaceCoords, setNewPlaceCoords] = useState<{ lat: number; lng: number; address?: string; name?: string } | null>(null);
   const [moveTo, setMoveTo] = useState<{ lat: number; lng: number } | null>(null);
-  const [editingPlace, setEditingPlace] = useState<PlaceDetailType | null>(null);
-  const [previewPlace, setPreviewPlace] = useState<{ lat: number; lng: number; address: string; name: string } | null>(null);
-
-  // Map search state
-  const [searchResults, setSearchResults] = useState<SearchResultPlace[]>([]);
-  const [searchKeyword, setSearchKeyword] = useState('');
-  const [showResearchButton, setShowResearchButton] = useState(false);
-  const [searchToast, setSearchToast] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const mapRef = useRef<KakaoMapHandle>(null);
   const headerRef = useRef<HTMLElement>(null);
   const [headerHeight, setHeaderHeight] = useState(0);
-  const searchKeywordRef = useRef('');
-  const lastSearchCenterRef = useRef<{ lat: number; lng: number } | null>(null);
-  searchKeywordRef.current = searchKeyword;
 
-  // Auth state
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [loginError, setLoginError] = useState<string | undefined>();
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  // Auth hook (called before useMarkerFilter so we have isAuthenticated)
+  // Uses onLogin/onLogout callbacks that will be wired to filter after
+  const filterCallbacksRef = useRef<{ enableMyFootprint: () => void; disablePersonalTypes: () => void }>({
+    enableMyFootprint: () => {},
+    disablePersonalTypes: () => {},
+  });
+
+  const auth = useAuth({
+    onLogin: useCallback(() => filterCallbacksRef.current.enableMyFootprint(), []),
+    onLogout: useCallback(() => filterCallbacksRef.current.disablePersonalTypes(), []),
+  });
 
   // Marker filter hook
   const {
@@ -57,22 +49,33 @@ export default function Home() {
     setSelectedGrades,
     enableMyFootprint,
     disablePersonalTypes,
-  } = useMarkerFilter({ markers, isAuthenticated });
+  } = useMarkerFilter({ markers, isAuthenticated: auth.isAuthenticated });
+
+  // Wire filter callbacks to auth via ref
+  filterCallbacksRef.current = { enableMyFootprint, disablePersonalTypes };
+
+  // Place actions hook
+  const place = usePlaceActions({ setMarkers, setMoveTo });
+
+  // Map search hook
+  const search = useMapSearch({
+    mapRef,
+    setMoveTo,
+    setPreviewPlace: place.setPreviewPlace,
+    clearPanels: place.clearPanels,
+    clearDetailPanels: place.clearDetailPanels,
+  });
+
+  // About modal & refresh state
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
+  const [showAboutBadge, setShowAboutBadge] = useState(false);
 
   useEffect(() => {
-    const loggedIn = isLoggedIn();
-    setIsAuthenticated(loggedIn);
-    // 로그인 상태면 "나의 발자취" 기본 활성화
-    if (loggedIn) {
-      enableMyFootprint();
+    if (!localStorage.getItem('about-seen')) {
+      setShowAboutBadge(true);
     }
-
-    const handleAuthExpired = () => {
-      setIsAuthenticated(false);
-    };
-    window.addEventListener('auth-expired', handleAuthExpired);
-    return () => window.removeEventListener('auth-expired', handleAuthExpired);
-  }, [enableMyFootprint]);
+  }, []);
 
   // 헤더 높이 측정 (SearchResultsPanel 위치용)
   useEffect(() => {
@@ -87,6 +90,7 @@ export default function Home() {
     return () => observer.disconnect();
   }, []);
 
+  // 마커 fetch
   useEffect(() => {
     const fetchMarkers = async () => {
       try {
@@ -98,206 +102,19 @@ export default function Home() {
         setError('마커를 불러오는데 실패했습니다. 백엔드 서버가 실행 중인지 확인해주세요.');
       }
     };
-
     fetchMarkers();
   }, []);
 
-  const handleMarkerClick = useCallback(async (markers: Marker[], position: { x: number; y: number }) => {
-    if (markers.length > 1) {
-      // 그룹 마커: 장소 목록 팝업 표시
-      setGroupMarkers(markers);
-      setGroupPosition(position);
-      setSelectedPlace(null);
-      setPanelPosition(null);
-    } else {
-      // 단일 마커: 상세 정보 표시
-      setGroupMarkers(null);
-      setGroupPosition(null);
-      setPanelPosition(position);
-      setIsLoadingPlace(true);
-      try {
-        const place = await placeApi.getById(markers[0].id);
-        setSelectedPlace(place);
-      } catch (err) {
-        console.error('Failed to fetch place detail:', err);
-      } finally {
-        setIsLoadingPlace(false);
-      }
-    }
-  }, []);
-
-  const handleGroupMarkerSelect = useCallback(async (marker: Marker) => {
-    setGroupMarkers(null);
-    setGroupPosition(null);
-    setPanelPosition(groupPosition);
-    setIsLoadingPlace(true);
+  const handleRefreshMarkers = useCallback(async () => {
+    setIsRefreshing(true);
     try {
-      const place = await placeApi.getById(marker.id);
-      setSelectedPlace(place);
+      const data = await mapApi.refreshMarkers();
+      setMarkers(data);
     } catch (err) {
-      console.error('Failed to fetch place detail:', err);
+      console.error('Failed to refresh markers:', err);
     } finally {
-      setIsLoadingPlace(false);
+      setIsRefreshing(false);
     }
-  }, [groupPosition]);
-
-  const handleCloseGroupPopup = useCallback(() => {
-    setGroupMarkers(null);
-    setGroupPosition(null);
-  }, []);
-
-  const handleCloseDetail = useCallback(() => {
-    setSelectedPlace(null);
-    setPanelPosition(null);
-  }, []);
-
-  const handleMapClick = useCallback(() => {
-    // 맵 클릭 시 모든 팝업 닫기
-    setSelectedPlace(null);
-    setPanelPosition(null);
-    setGroupMarkers(null);
-    setGroupPosition(null);
-    setPreviewPlace(null);
-  }, []);
-
-  const handleCreatePlace = useCallback(async (data: PlaceFormData) => {
-    await placeApi.create(data);
-    setNewPlaceCoords(null);
-    // 마커 새로고침 (캐시된 데이터)
-    const newMarkers = await mapApi.getMarkers();
-    setMarkers(newMarkers);
-  }, []);
-
-  const handleCloseForm = useCallback(() => {
-    setNewPlaceCoords(null);
-    setEditingPlace(null);
-  }, []);
-
-  const handleEditPlace = useCallback((place: PlaceDetailType) => {
-    setEditingPlace(place);
-    setSelectedPlace(null);
-    setPanelPosition(null);
-  }, []);
-
-  const handleUpdatePlace = useCallback(async (data: PlaceFormData) => {
-    if (!editingPlace) return;
-    await placeApi.update(editingPlace.id, data);
-    setEditingPlace(null);
-    // 마커 새로고침 (캐시된 데이터)
-    const newMarkers = await mapApi.getMarkers();
-    setMarkers(newMarkers);
-  }, [editingPlace]);
-
-  const handleDeletePlace = useCallback(async (placeId: number) => {
-    await placeApi.delete(placeId);
-    setSelectedPlace(null);
-    setPanelPosition(null);
-    // 로컬 state에서 마커 제거 (백엔드 캐시 유지)
-    setMarkers(prev => prev.filter(m => m.id !== placeId));
-  }, []);
-
-  // 지도 내 장소 검색 (카카오 keywordSearch + rect + center)
-  const performMapSearch = useCallback((keyword: string) => {
-    if (!keyword.trim() || !window.kakao?.maps?.services) return;
-
-    const bounds = mapRef.current?.getBounds();
-    const center = mapRef.current?.getCenter();
-    if (!bounds) return;
-
-    setShowResearchButton(false);
-
-    const ps = new window.kakao.maps.services.Places();
-
-    // rect: 사각형 범위 제한 (sw_lng, sw_lat, ne_lng, ne_lat)
-    const rect = `${bounds.sw.lng},${bounds.sw.lat},${bounds.ne.lng},${bounds.ne.lat}`;
-
-    const baseOptions: any = {
-      rect,
-      size: 15,
-    };
-
-    // 중심 좌표 전달 → 거리순 정렬로 근처 장소 우선
-    if (center) {
-      baseOptions.x = String(center.lng);
-      baseOptions.y = String(center.lat);
-      baseOptions.sort = window.kakao.maps.services.SortBy.DISTANCE;
-    }
-
-    const processResults = (allData: any[]) => {
-      if (center) {
-        lastSearchCenterRef.current = center;
-      }
-
-      if (allData.length > 0) {
-        // 중복 제거 (place_name + x + y 기준)
-        const seen = new Set<string>();
-        const unique = allData.filter((item: any) => {
-          const key = `${item.place_name}_${item.x}_${item.y}`;
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        });
-
-        const results: SearchResultPlace[] = unique.slice(0, 15).map((item: any, index: number) => ({
-          label: String.fromCharCode(65 + index),
-          name: item.place_name,
-          category: item.category_group_name || '',
-          address: item.road_address_name || item.address_name,
-          phone: item.phone || '',
-          lat: parseFloat(item.y),
-          lng: parseFloat(item.x),
-        }));
-        setSearchResults(results);
-        setSearchKeyword(keyword);
-        setSelectedPlace(null);
-        setPanelPosition(null);
-        setGroupMarkers(null);
-        setGroupPosition(null);
-        setPreviewPlace(null);
-      } else {
-        setSearchResults([]);
-        setSearchKeyword(keyword);
-        setSearchToast('검색 결과가 없습니다');
-        setTimeout(() => setSearchToast(null), 2000);
-      }
-    };
-
-    // 1페이지 검색 후, 결과가 15개 이상이면 2페이지도 조회
-    ps.keywordSearch(
-      keyword,
-      (data1: any[], status1: any) => {
-        const page1 = status1 === window.kakao.maps.services.Status.OK ? data1 : [];
-
-        if (page1.length >= 15) {
-          ps.keywordSearch(
-            keyword,
-            (data2: any[], status2: any) => {
-              const page2 = status2 === window.kakao.maps.services.Status.OK ? data2 : [];
-              processResults([...page1, ...page2]);
-            },
-            { ...baseOptions, page: 2 }
-          );
-        } else {
-          processResults(page1);
-        }
-      },
-      { ...baseOptions, page: 1 }
-    );
-  }, []);
-
-  const handlePreviewRegister = useCallback(() => {
-    if (!previewPlace) return;
-    setNewPlaceCoords({
-      lat: previewPlace.lat,
-      lng: previewPlace.lng,
-      address: previewPlace.address,
-      name: previewPlace.name,
-    });
-    setPreviewPlace(null);
-  }, [previewPlace]);
-
-  const handlePreviewClose = useCallback(() => {
-    setPreviewPlace(null);
   }, []);
 
   const handleMoveToCurrentLocation = useCallback(() => {
@@ -324,137 +141,21 @@ export default function Home() {
     );
   }, []);
 
-  const handleLogin = useCallback(async (password: string) => {
-    setIsLoggingIn(true);
-    setLoginError(undefined);
-    try {
-      await authApi.login(password);
-      setIsAuthenticated(true);
-      setShowLoginModal(false);
-      // 로그인 시 "나의 발자취" 기본 활성화
-      enableMyFootprint();
-    } catch (err) {
-      setLoginError(err instanceof Error ? err.message : '로그인에 실패했습니다');
-    } finally {
-      setIsLoggingIn(false);
-    }
-  }, [enableMyFootprint]);
-
-  const handleLogout = useCallback(() => {
-    authApi.logout();
-    setIsAuthenticated(false);
-    // 로그아웃 시 개인 카테고리 선택 해제
-    disablePersonalTypes();
-  }, [disablePersonalTypes]);
-
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [showAbout, setShowAbout] = useState(false);
-  const [showAboutBadge, setShowAboutBadge] = useState(false);
-
-  useEffect(() => {
-    if (!localStorage.getItem('about-seen')) {
-      setShowAboutBadge(true);
-    }
-  }, []);
-
-  const handleRefreshMarkers = useCallback(async () => {
-    setIsRefreshing(true);
-    try {
-      const data = await mapApi.refreshMarkers();
-      setMarkers(data);
-    } catch (err) {
-      console.error('Failed to refresh markers:', err);
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, []);
-
-  // 일반 검색 결과 선택 (드롭다운 → 미리보기)
-  const handleSearchSelect = useCallback((result: { lat: number; lng: number; address: string; name?: string }) => {
-    setMoveTo({ lat: result.lat, lng: result.lng });
-    setPreviewPlace({
-      lat: result.lat,
-      lng: result.lng,
-      address: result.address,
-      name: result.name || result.address,
-    });
-    setSelectedPlace(null);
-    setPanelPosition(null);
-    setGroupMarkers(null);
-    setGroupPosition(null);
-  }, []);
-
-  // 검색 키워드 저장 (플로팅 재검색 버튼용)
-  const handleSearchKeyword = useCallback((keyword: string) => {
-    setSearchKeyword(keyword);
-    searchKeywordRef.current = keyword;
-  }, []);
-
-  // 지도 이동 시 재검색 버튼 표시
-  const handleMapMoved = useCallback(() => {
-    if (!searchKeywordRef.current) return;
-
-    const currentCenter = mapRef.current?.getCenter();
-    const lastCenter = lastSearchCenterRef.current;
-
-    if (!lastCenter) {
-      setShowResearchButton(true);
-      return;
-    }
-
-    if (currentCenter) {
-      const dLat = currentCenter.lat - lastCenter.lat;
-      const dLng = currentCenter.lng - lastCenter.lng;
-      const dist = Math.sqrt(dLat * dLat + dLng * dLng);
-      if (dist > 0.002) {
-        setShowResearchButton(true);
-      }
-    }
-  }, []);
-
-  // 플로팅 버튼 클릭 (현 지도에서 재검색)
-  const handleResearch = useCallback(() => {
-    performMapSearch(searchKeywordRef.current);
-  }, [performMapSearch]);
-
-  const handleSearchResultSelect = useCallback((result: SearchResultPlace) => {
-    setMoveTo({ lat: result.lat, lng: result.lng });
-    setPreviewPlace({
-      lat: result.lat,
-      lng: result.lng,
-      address: result.address,
-      name: result.name,
-    });
-    // 패널 닫되 키워드는 유지 (지도 이동 시 재검색 버튼용)
-    setSearchResults([]);
-    setSelectedPlace(null);
-    setPanelPosition(null);
-    setGroupMarkers(null);
-    setGroupPosition(null);
-  }, []);
-
-  const handleCloseSearchResults = useCallback(() => {
-    setSearchResults([]);
-    setSearchKeyword('');
-    setShowResearchButton(false);
-    lastSearchCenterRef.current = null;
-  }, []);
-
   return (
     <main className="relative h-dvh w-screen overflow-hidden">
       {/* Map */}
       <KakaoMap
         ref={mapRef}
         markers={filteredMarkers}
-        onMarkerClick={handleMarkerClick}
-        onMapClick={handleMapClick}
+        onMarkerClick={place.handleMarkerClick}
+        onMapClick={place.handleMapClick}
         center={{ lat: 37.5716, lng: 126.9768 }}
         zoom={3}
         moveTo={moveTo}
-        previewPosition={previewPlace ? { lat: previewPlace.lat, lng: previewPlace.lng } : null}
-        searchResults={searchResults}
-        onSearchMarkerClick={handleSearchResultSelect}
-        onMapMoved={handleMapMoved}
+        previewPosition={place.previewPlace ? { lat: place.previewPlace.lat, lng: place.previewPlace.lng } : null}
+        searchResults={search.searchResults}
+        onSearchMarkerClick={search.handleSearchResultSelect}
+        onMapMoved={search.handleMapMoved}
       />
 
       {/* Header */}
@@ -481,25 +182,25 @@ export default function Home() {
             onTypeToggle={handleTypeToggle}
             selectedGrades={selectedGrades}
             onGradeChange={setSelectedGrades}
-            isAuthenticated={isAuthenticated}
+            isAuthenticated={auth.isAuthenticated}
           />
           <AddressSearch
-            onSelect={handleSearchSelect}
-            onSearchKeyword={handleSearchKeyword}
+            onSelect={place.handleSearchSelect}
+            onSearchKeyword={search.handleSearchKeyword}
           />
         </div>
       </header>
 
       {/* 플로팅 "현 지도에서 검색" 버튼 */}
       <button
-        onClick={handleResearch}
+        onClick={search.handleResearch}
         style={{ top: `${headerHeight + 12}px` }}
         className={`absolute -translate-x-1/2 z-20 bg-white border border-blue-400 text-blue-600 px-4 py-2 rounded-full text-sm font-medium shadow-lg hover:bg-blue-50 active:bg-blue-100 transition-all duration-300 ${
-          showResearchButton && searchKeyword
+          search.showResearchButton && search.searchKeyword
             ? 'opacity-100 translate-y-0'
             : 'opacity-0 -translate-y-2 pointer-events-none'
         } ${
-          searchResults.length > 0
+          search.searchResults.length > 0
             ? 'left-1/2 sm:left-[calc(50%+10rem)]'
             : 'left-1/2'
         }`}
@@ -508,22 +209,22 @@ export default function Home() {
       </button>
 
       {/* 검색 결과 없음 토스트 */}
-      {searchToast && (
+      {search.searchToast && (
         <div
           className="absolute left-1/2 -translate-x-1/2 z-30 bg-gray-800/90 text-white px-4 py-2 rounded-full text-sm shadow-lg"
           style={{ top: `${headerHeight + 12}px` }}
         >
-          {searchToast}
+          {search.searchToast}
         </div>
       )}
 
       {/* Search Results Panel (현 지도 내 검색 결과) */}
-      {searchResults.length > 0 && (
+      {search.searchResults.length > 0 && (
         <SearchResultsPanel
-          results={searchResults}
-          keyword={searchKeyword}
-          onSelect={handleSearchResultSelect}
-          onClose={handleCloseSearchResults}
+          results={search.searchResults}
+          keyword={search.searchKeyword}
+          onSelect={search.handleSearchResultSelect}
+          onClose={search.handleCloseSearchResults}
           headerHeight={headerHeight}
         />
       )}
@@ -537,68 +238,68 @@ export default function Home() {
 
       {/* Place Detail Panel */}
       <PlaceDetail
-        place={selectedPlace}
-        isLoading={isLoadingPlace}
-        onClose={handleCloseDetail}
-        onEdit={handleEditPlace}
-        onDelete={handleDeletePlace}
-        position={panelPosition}
-        isAuthenticated={isAuthenticated}
+        place={place.selectedPlace}
+        isLoading={place.isLoadingPlace}
+        onClose={place.handleCloseDetail}
+        onEdit={place.handleEditPlace}
+        onDelete={place.handleDeletePlace}
+        position={place.panelPosition}
+        isAuthenticated={auth.isAuthenticated}
       />
 
       {/* Place List Popup (같은 위치에 여러 장소) */}
-      {groupMarkers && groupPosition && (
+      {place.groupMarkers && place.groupPosition && (
         <PlaceListPopup
-          markers={groupMarkers}
-          position={groupPosition}
-          onSelect={handleGroupMarkerSelect}
-          onClose={handleCloseGroupPopup}
+          markers={place.groupMarkers}
+          position={place.groupPosition}
+          onSelect={place.handleGroupMarkerSelect}
+          onClose={place.handleCloseGroupPopup}
         />
       )}
 
       {/* Place Preview Card (검색 결과 클릭 시 미리보기) */}
-      {previewPlace && (
+      {place.previewPlace && (
         <PlacePreviewCard
-          name={previewPlace.name}
-          address={previewPlace.address}
-          onRegister={handlePreviewRegister}
-          onClose={handlePreviewClose}
+          name={place.previewPlace.name}
+          address={place.previewPlace.address}
+          onRegister={place.handlePreviewRegister}
+          onClose={place.handlePreviewClose}
         />
       )}
 
       {/* Place Form Modal - Create (검색 결과 클릭으로만 열림) */}
-      {newPlaceCoords && (
+      {place.newPlaceCoords && (
         <PlaceForm
-          latitude={newPlaceCoords.lat}
-          longitude={newPlaceCoords.lng}
-          initialAddress={newPlaceCoords.address}
-          initialName={newPlaceCoords.name}
-          isAuthenticated={isAuthenticated}
-          onSubmit={handleCreatePlace}
-          onClose={handleCloseForm}
+          latitude={place.newPlaceCoords.lat}
+          longitude={place.newPlaceCoords.lng}
+          initialAddress={place.newPlaceCoords.address}
+          initialName={place.newPlaceCoords.name}
+          isAuthenticated={auth.isAuthenticated}
+          onSubmit={place.handleCreatePlace}
+          onClose={place.handleCloseForm}
         />
       )}
 
       {/* Place Form Modal - Edit */}
-      {editingPlace && (
+      {place.editingPlace && (
         <PlaceForm
-          latitude={editingPlace.latitude}
-          longitude={editingPlace.longitude}
-          initialAddress={editingPlace.address}
-          initialName={editingPlace.name}
-          initialType={editingPlace.type}
-          initialDescription={editingPlace.description}
-          initialGrade={editingPlace.grade}
+          latitude={place.editingPlace.latitude}
+          longitude={place.editingPlace.longitude}
+          initialAddress={place.editingPlace.address}
+          initialName={place.editingPlace.name}
+          initialType={place.editingPlace.type}
+          initialDescription={place.editingPlace.description}
+          initialGrade={place.editingPlace.grade}
           isEditMode
-          isAuthenticated={isAuthenticated}
-          onSubmit={handleUpdatePlace}
-          onClose={handleCloseForm}
+          isAuthenticated={auth.isAuthenticated}
+          onSubmit={place.handleUpdatePlace}
+          onClose={place.handleCloseForm}
         />
       )}
 
       {/* Floating action buttons - bottom left */}
       <div className="absolute bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] left-4 z-10 flex flex-col gap-2">
-        {isAuthenticated && (
+        {auth.isAuthenticated && (
           <button
             onClick={handleRefreshMarkers}
             disabled={isRefreshing}
@@ -616,15 +317,15 @@ export default function Home() {
           </button>
         )}
         <button
-          onClick={isAuthenticated ? handleLogout : () => { setLoginError(undefined); setShowLoginModal(true); }}
+          onClick={auth.isAuthenticated ? auth.handleLogout : () => { auth.setLoginError(undefined); auth.setShowLoginModal(true); }}
           className={`backdrop-blur p-2.5 rounded-full shadow-lg transition-colors ${
-            isAuthenticated
+            auth.isAuthenticated
               ? 'bg-green-100/90 hover:bg-green-200'
               : 'bg-white/90 hover:bg-white'
           }`}
-          title={isAuthenticated ? '로그아웃' : '관리자 로그인'}
+          title={auth.isAuthenticated ? '로그아웃' : '관리자 로그인'}
         >
-          {isAuthenticated ? (
+          {auth.isAuthenticated ? (
             <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
             </svg>
@@ -665,11 +366,11 @@ export default function Home() {
 
       {/* Login Modal */}
       <LoginModal
-        isOpen={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
-        onConfirm={handleLogin}
-        isLoading={isLoggingIn}
-        error={loginError}
+        isOpen={auth.showLoginModal}
+        onClose={() => auth.setShowLoginModal(false)}
+        onConfirm={auth.handleLogin}
+        isLoading={auth.isLoggingIn}
+        error={auth.loginError}
       />
 
       {/* About Modal */}
