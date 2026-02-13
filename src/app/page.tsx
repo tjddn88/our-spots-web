@@ -149,7 +149,7 @@ export default function Home() {
         markers={filteredMarkers}
         onMarkerClick={place.handleMarkerClick}
         onMapClick={place.handleMapClick}
-        center={{ lat: 37.5716, lng: 126.9768 }}
+        center={{ lat: 37.5708, lng: 126.9745 }}
         zoom={3}
         moveTo={moveTo}
         previewPosition={place.previewPlace ? { lat: place.previewPlace.lat, lng: place.previewPlace.lng } : null}
