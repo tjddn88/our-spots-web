@@ -35,10 +35,11 @@ export function useAuth({
 
     const handleAuthExpired = () => {
       setIsAuthenticated(false);
+      onLogout();
     };
     window.addEventListener('auth-expired', handleAuthExpired);
     return () => window.removeEventListener('auth-expired', handleAuthExpired);
-  }, [onLogin]);
+  }, [onLogin, onLogout]);
 
   const handleLogin = useCallback(async (password: string) => {
     setIsLoggingIn(true);

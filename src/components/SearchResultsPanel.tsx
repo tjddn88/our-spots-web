@@ -2,6 +2,7 @@
 
 import { useRef, useState, useCallback } from 'react';
 import { SearchResultPlace } from '@/types';
+import { CloseIcon } from '@/components/icons';
 
 interface SearchResultsPanelProps {
   results: SearchResultPlace[];
@@ -9,6 +10,67 @@ interface SearchResultsPanelProps {
   onSelect: (result: SearchResultPlace) => void;
   onClose: () => void;
   headerHeight: number;
+}
+
+function SearchResultItem({ result, onSelect, compact }: {
+  result: SearchResultPlace;
+  onSelect: (result: SearchResultPlace) => void;
+  compact?: boolean;
+}) {
+  return (
+    <button
+      onClick={() => onSelect(result)}
+      className={`w-full px-4 text-left hover:bg-blue-50 border-b last:border-b-0 transition-colors ${compact ? 'py-2.5' : 'py-3'}`}
+    >
+      <div className={`flex items-start ${compact ? 'gap-2' : 'gap-2.5'}`}>
+        <span className={`shrink-0 bg-red-500 text-white rounded-full flex items-center justify-center font-bold mt-0.5 ${
+          compact ? 'w-5 h-5 text-[10px]' : 'w-6 h-6 text-xs'
+        }`}>
+          {result.label}
+        </span>
+        <div className="flex-1 min-w-0">
+          <div className="font-medium text-sm truncate">{result.name}</div>
+          {compact ? (
+            <div className="text-xs text-gray-500 truncate">
+              {result.category && <span className="text-gray-400">{result.category} · </span>}
+              {result.address}
+            </div>
+          ) : (
+            <>
+              {result.category && (
+                <div className="text-xs text-gray-400 mt-0.5">{result.category}</div>
+              )}
+              <div className="text-xs text-gray-500 mt-1 truncate">{result.address}</div>
+              {result.phone && (
+                <div className="text-xs text-blue-500 mt-0.5">{result.phone}</div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function ResultList({ results, onSelect, compact }: {
+  results: SearchResultPlace[];
+  onSelect: (result: SearchResultPlace) => void;
+  compact?: boolean;
+}) {
+  if (results.length === 0) {
+    return (
+      <div className="p-4 text-sm text-gray-500 text-center">
+        검색 결과가 없습니다
+      </div>
+    );
+  }
+  return (
+    <>
+      {results.map((result) => (
+        <SearchResultItem key={result.label} result={result} onSelect={onSelect} compact={compact} />
+      ))}
+    </>
+  );
 }
 
 export default function SearchResultsPanel({
@@ -52,6 +114,15 @@ export default function SearchResultsPanel({
     // 그 외에는 현재 위치 고정 (드래그한 만큼 내려간 상태 유지)
   }, [isDragging, translateY, onClose]);
 
+  const closeButton = (
+    <button
+      onClick={onClose}
+      className="p-1 hover:bg-gray-200 rounded transition-colors"
+    >
+      <CloseIcon className="w-4 h-4 text-gray-500" />
+    </button>
+  );
+
   return (
     <>
       {/* 모바일: 하단 드래그 시트 */}
@@ -80,44 +151,12 @@ export default function SearchResultsPanel({
             현재 지도 내 <span className="font-bold text-blue-600">{keyword}</span> 검색결과
             <span className="text-gray-400 ml-1.5">장소 {results.length}</span>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-gray-200 rounded transition-colors"
-          >
-            <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          {closeButton}
         </div>
 
         {/* Results list */}
         <div className="overflow-y-auto flex-1 touch-pan-y" style={{ overscrollBehavior: 'contain' }}>
-          {results.length === 0 ? (
-            <div className="p-4 text-sm text-gray-500 text-center">
-              검색 결과가 없습니다
-            </div>
-          ) : (
-            results.map((result) => (
-              <button
-                key={result.label}
-                onClick={() => onSelect(result)}
-                className="w-full px-4 py-2.5 text-left hover:bg-blue-50 border-b last:border-b-0 transition-colors"
-              >
-                <div className="flex items-start gap-2">
-                  <span className="shrink-0 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold mt-0.5">
-                    {result.label}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm truncate">{result.name}</div>
-                    <div className="text-xs text-gray-500 truncate">
-                      {result.category && <span className="text-gray-400">{result.category} · </span>}
-                      {result.address}
-                    </div>
-                  </div>
-                </div>
-              </button>
-            ))
-          )}
+          <ResultList results={results} onSelect={onSelect} compact />
         </div>
       </div>
 
@@ -134,14 +173,7 @@ export default function SearchResultsPanel({
           <div className="text-sm text-gray-700">
             현재 지도 내 <span className="font-bold text-blue-600">{keyword}</span> 검색결과
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-gray-200 rounded transition-colors"
-          >
-            <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          {closeButton}
         </div>
 
         {/* Result count */}
@@ -151,35 +183,7 @@ export default function SearchResultsPanel({
 
         {/* Results list */}
         <div className="overflow-y-auto flex-1">
-          {results.length === 0 ? (
-            <div className="p-4 text-sm text-gray-500 text-center">
-              검색 결과가 없습니다
-            </div>
-          ) : (
-            results.map((result) => (
-              <button
-                key={result.label}
-                onClick={() => onSelect(result)}
-                className="w-full px-4 py-3 text-left hover:bg-blue-50 border-b last:border-b-0 transition-colors"
-              >
-                <div className="flex items-start gap-2.5">
-                  <span className="shrink-0 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
-                    {result.label}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm truncate">{result.name}</div>
-                    {result.category && (
-                      <div className="text-xs text-gray-400 mt-0.5">{result.category}</div>
-                    )}
-                    <div className="text-xs text-gray-500 mt-1 truncate">{result.address}</div>
-                    {result.phone && (
-                      <div className="text-xs text-blue-500 mt-0.5">{result.phone}</div>
-                    )}
-                  </div>
-                </div>
-              </button>
-            ))
-          )}
+          <ResultList results={results} onSelect={onSelect} />
         </div>
       </div>
     </>

@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { PlaceType } from '@/types';
-import { TYPE_CONFIG, GRADE_CONFIG } from '@/constants/placeConfig';
+import { TYPE_CONFIG, GRADE_CONFIG, PUBLIC_TYPES, PERSONAL_TYPES } from '@/constants/placeConfig';
+import { CloseIcon } from '@/components/icons';
 
 interface PlaceFormProps {
   latitude: number;
@@ -76,9 +77,7 @@ export default function PlaceForm({ latitude, longitude, initialAddress, initial
             className="p-1 hover:bg-gray-100 rounded-full transition-colors"
             aria-label="닫기"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <CloseIcon className="w-5 h-5" />
           </button>
         </div>
 
@@ -89,7 +88,7 @@ export default function PlaceForm({ latitude, longitude, initialAddress, initial
             <label className="block text-sm font-medium text-gray-700 mb-1">유형</label>
             <div className="flex flex-col gap-2">
               <div className="flex gap-2">
-                {(['RESTAURANT', 'KIDS_PLAYGROUND', 'RELAXATION'] as PlaceType[]).map((t) => (
+                {PUBLIC_TYPES.map((t) => (
                   <button
                     key={t}
                     type="button"
@@ -104,7 +103,7 @@ export default function PlaceForm({ latitude, longitude, initialAddress, initial
               </div>
               {isAuthenticated && (
                 <div className="flex gap-2">
-                  {(['MY_FOOTPRINT', 'RECOMMENDED_RESTAURANT', 'RECOMMENDED_SPOT'] as PlaceType[]).map((t) => (
+                  {PERSONAL_TYPES.map((t) => (
                     <button
                       key={t}
                       type="button"

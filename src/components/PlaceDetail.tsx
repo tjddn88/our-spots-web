@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { PlaceDetail as PlaceDetailType, PlaceType } from '@/types';
 import { TYPE_CONFIG, getGradeLabel, PANEL_DIMENSIONS } from '@/constants/placeConfig';
+import { clampPosition } from '@/utils/position';
+import { CloseIcon } from '@/components/icons';
 
 interface PlaceDetailProps {
   place: PlaceDetailType | null;
@@ -17,13 +19,19 @@ interface PlaceDetailProps {
 export default function PlaceDetail({ place, isLoading, onClose, onEdit, onDelete, position, isAuthenticated }: PlaceDetailProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => {
+    return () => clearTimeout(copyTimerRef.current);
+  }, []);
 
   const handleCopyAddress = async () => {
     if (!place?.address) return;
     try {
       await navigator.clipboard.writeText(place.address);
       setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
+      clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => setIsCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy address:', err);
     }
@@ -53,37 +61,17 @@ export default function PlaceDetail({ place, isLoading, onClose, onEdit, onDelet
 
   if ((!place && !isLoading) || !position) return null;
 
-  const { DETAIL_WIDTH: panelWidth, DETAIL_HEIGHT: panelHeight, HEADER_HEIGHT: headerHeight, MARGIN: padding } = PANEL_DIMENSIONS;
-
-  let adjustedX = position.x;
-  let adjustedY = position.y;
-
-  // 우측 경계 체크: 패널이 화면 밖으로 나가면 마커 왼쪽에 표시
-  if (position.x + panelWidth + padding > window.innerWidth) {
-    adjustedX = position.x - panelWidth - 50;
-  }
-
-  // 좌측 경계 체크
-  if (adjustedX < padding) {
-    adjustedX = padding;
-  }
-
-  // 하단 경계 체크: 패널이 화면 밖으로 나가면 위로 표시
-  if (position.y + panelHeight + padding > window.innerHeight) {
-    adjustedY = window.innerHeight - panelHeight - padding;
-  }
-
-  // 상단 경계 체크: 헤더 아래로
-  if (adjustedY < headerHeight) {
-    adjustedY = headerHeight;
-  }
+  const adjusted = clampPosition(position, {
+    width: PANEL_DIMENSIONS.DETAIL_WIDTH,
+    height: PANEL_DIMENSIONS.DETAIL_HEIGHT,
+  });
 
   return (
     <div
       className="fixed z-50 w-72 max-h-80"
       style={{
-        left: `${adjustedX}px`,
-        top: `${adjustedY}px`,
+        left: `${adjusted.x}px`,
+        top: `${adjusted.y}px`,
       }}
     >
       <div className="bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-80">
@@ -115,9 +103,7 @@ export default function PlaceDetail({ place, isLoading, onClose, onEdit, onDelet
             className="p-1 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0 ml-2"
             aria-label="닫기"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <CloseIcon />
           </button>
         </div>
 

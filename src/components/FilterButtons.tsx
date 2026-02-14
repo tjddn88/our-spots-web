@@ -33,12 +33,6 @@ export default function FilterButtons({ selectedTypes, onTypeToggle, selectedGra
     onGradeChange(newGrades);
   };
 
-  const getGradeLabelText = () => {
-    if (selectedGrades.size === 3) return '전체';
-    if (selectedGrades.size === 0) return '없음';
-    return GRADE_LABELS.filter(g => selectedGrades.has(g.grade)).map(g => g.label).join(', ');
-  };
-
   // 필터가 기본값(1,2)이 아닌지 확인
   const isFiltered = selectedGrades.size < 3;
 

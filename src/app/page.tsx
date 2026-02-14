@@ -13,12 +13,14 @@ import PlaceListPopup from '@/components/PlaceListPopup';
 import PlacePreviewCard from '@/components/PlacePreviewCard';
 import AboutModal from '@/components/AboutModal';
 import SearchResultsPanel from '@/components/SearchResultsPanel';
+import { LocationPinIcon, RefreshIcon, LockIcon, UnlockIcon, CurrentLocationIcon, ChatBubbleIcon } from '@/components/icons';
 import { mapApi } from '@/services/api';
 import { Marker } from '@/types';
 import { useMarkerFilter } from '@/hooks/useMarkerFilter';
 import { useAuth } from '@/hooks/useAuth';
 import { usePlaceActions } from '@/hooks/usePlaceActions';
 import { useMapSearch } from '@/hooks/useMapSearch';
+import { DEFAULT_CENTER } from '@/constants/placeConfig';
 
 export default function Home() {
   const [markers, setMarkers] = useState<Marker[]>([]);
@@ -149,7 +151,7 @@ export default function Home() {
         markers={filteredMarkers}
         onMarkerClick={place.handleMarkerClick}
         onMapClick={place.handleMapClick}
-        center={{ lat: 37.5708, lng: 126.9745 }}
+        center={DEFAULT_CENTER}
         zoom={3}
         moveTo={moveTo}
         previewPosition={place.previewPlace ? { lat: place.previewPlace.lat, lng: place.previewPlace.lng } : null}
@@ -163,9 +165,7 @@ export default function Home() {
         {/* Title Bar */}
         <div className="bg-white border-b border-gray-100 shadow-sm">
           <div className="px-4 py-2.5 flex items-center gap-2">
-            <svg className="w-5 h-5 text-red-500 shrink-0" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-            </svg>
+            <LocationPinIcon className="w-5 h-5 text-red-500 shrink-0" />
             <h1
               className="text-lg sm:text-xl font-bold tracking-tight text-[#1E293B]"
               style={{ fontFamily: 'var(--font-geist-sans), sans-serif' }}
@@ -306,14 +306,7 @@ export default function Home() {
             className="bg-white/90 backdrop-blur p-2.5 rounded-full shadow-lg hover:bg-white transition-colors disabled:opacity-50"
             title="DB에서 마커 새로고침"
           >
-            <svg
-              className={`w-5 h-5 text-gray-600 ${isRefreshing ? 'animate-spin' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
+            <RefreshIcon className={`w-5 h-5 text-gray-600 ${isRefreshing ? 'animate-spin' : ''}`} />
           </button>
         )}
         <button
@@ -326,13 +319,9 @@ export default function Home() {
           title={auth.isAuthenticated ? '로그아웃' : '관리자 로그인'}
         >
           {auth.isAuthenticated ? (
-            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-            </svg>
+            <UnlockIcon className="w-5 h-5 text-green-600" />
           ) : (
-            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
+            <LockIcon className="w-5 h-5 text-gray-600" />
           )}
         </button>
       </div>
@@ -344,10 +333,7 @@ export default function Home() {
           className="bg-white/90 backdrop-blur p-2.5 rounded-full shadow-lg hover:bg-white transition-colors"
           title="현재 위치로 이동"
         >
-          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
+          <CurrentLocationIcon className="w-5 h-5 text-gray-600" />
         </button>
         <ShareLinkButton />
         <button
@@ -355,9 +341,7 @@ export default function Home() {
           className="relative bg-white/90 backdrop-blur p-2.5 rounded-full shadow-lg hover:bg-white transition-colors"
           title="프로젝트 소개"
         >
-          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-          </svg>
+          <ChatBubbleIcon className="w-5 h-5 text-gray-600" />
           {showAboutBadge && (
             <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
           )}

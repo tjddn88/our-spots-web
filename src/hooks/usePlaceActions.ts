@@ -60,6 +60,19 @@ export function usePlaceActions({
     setPreviewPlace(null);
   }, [clearDetailPanels]);
 
+  const fetchAndShowPlace = useCallback(async (markerId: number, position: { x: number; y: number }) => {
+    setPanelPosition(position);
+    setIsLoadingPlace(true);
+    try {
+      const place = await placeApi.getById(markerId);
+      setSelectedPlace(place);
+    } catch (err) {
+      console.error('Failed to fetch place detail:', err);
+    } finally {
+      setIsLoadingPlace(false);
+    }
+  }, []);
+
   const handleMarkerClick = useCallback(async (markers: Marker[], position: { x: number; y: number }) => {
     if (markers.length > 1) {
       setGroupMarkers(markers);
@@ -69,33 +82,15 @@ export function usePlaceActions({
     } else {
       setGroupMarkers(null);
       setGroupPosition(null);
-      setPanelPosition(position);
-      setIsLoadingPlace(true);
-      try {
-        const place = await placeApi.getById(markers[0].id);
-        setSelectedPlace(place);
-      } catch (err) {
-        console.error('Failed to fetch place detail:', err);
-      } finally {
-        setIsLoadingPlace(false);
-      }
+      await fetchAndShowPlace(markers[0].id, position);
     }
-  }, []);
+  }, [fetchAndShowPlace]);
 
   const handleGroupMarkerSelect = useCallback(async (marker: Marker) => {
     setGroupMarkers(null);
     setGroupPosition(null);
-    setPanelPosition(groupPosition);
-    setIsLoadingPlace(true);
-    try {
-      const place = await placeApi.getById(marker.id);
-      setSelectedPlace(place);
-    } catch (err) {
-      console.error('Failed to fetch place detail:', err);
-    } finally {
-      setIsLoadingPlace(false);
-    }
-  }, [groupPosition]);
+    await fetchAndShowPlace(marker.id, groupPosition!);
+  }, [groupPosition, fetchAndShowPlace]);
 
   const handleCloseGroupPopup = useCallback(() => {
     setGroupMarkers(null);
@@ -108,12 +103,8 @@ export function usePlaceActions({
   }, []);
 
   const handleMapClick = useCallback(() => {
-    setSelectedPlace(null);
-    setPanelPosition(null);
-    setGroupMarkers(null);
-    setGroupPosition(null);
-    setPreviewPlace(null);
-  }, []);
+    clearPanels();
+  }, [clearPanels]);
 
   const handleCreatePlace = useCallback(async (data: PlaceFormData) => {
     await placeApi.create(data);

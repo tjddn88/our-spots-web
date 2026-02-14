@@ -2,6 +2,7 @@
 
 import { Marker } from '@/types';
 import { TYPE_CONFIG, PANEL_DIMENSIONS, GRADE_LABELS } from '@/constants/placeConfig';
+import { clampPosition } from '@/utils/position';
 
 interface PlaceListPopupProps {
   markers: Marker[];
@@ -11,28 +12,11 @@ interface PlaceListPopupProps {
 }
 
 export default function PlaceListPopup({ markers, position, onSelect, onClose }: PlaceListPopupProps) {
-  // 화면 경계 체크하여 위치 조정
-  const adjustedPosition = { ...position };
-  const { LIST_WIDTH: popupWidth, LIST_MAX_HEIGHT: popupMaxHeight, MARGIN: margin } = PANEL_DIMENSIONS;
+  const { LIST_WIDTH: popupWidth, LIST_MAX_HEIGHT: popupMaxHeight } = PANEL_DIMENSIONS;
 
-  if (typeof window !== 'undefined') {
-    // 우측 경계 초과 시 마커 왼쪽으로 배치
-    if (position.x + popupWidth > window.innerWidth - margin) {
-      adjustedPosition.x = position.x - popupWidth - 60;
-    }
-    // 좌측 경계 클램핑
-    if (adjustedPosition.x < margin) {
-      adjustedPosition.x = margin;
-    }
-    // 하단 경계 초과 시 위로 조정
-    if (position.y + popupMaxHeight > window.innerHeight - margin) {
-      adjustedPosition.y = Math.max(margin, window.innerHeight - popupMaxHeight - margin);
-    }
-    // 상단 경계 클램핑
-    if (adjustedPosition.y < margin) {
-      adjustedPosition.y = margin;
-    }
-  }
+  const adjustedPosition = typeof window !== 'undefined'
+    ? clampPosition(position, { width: popupWidth, height: popupMaxHeight, leftFallbackOffset: 60 })
+    : position;
 
   return (
     <>

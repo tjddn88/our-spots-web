@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import { Marker, SearchResultPlace } from '@/types';
-import { MAP_ZOOM } from '@/constants/placeConfig';
+import { MAP_ZOOM, DEFAULT_CENTER } from '@/constants/placeConfig';
 import { useKakaoSDK } from '@/hooks/useKakaoSDK';
 import { groupMarkersByCoord, createSingleMarkerHTML, createGroupMarkerHTML, createSearchMarkerHTML } from './markerUtils';
 
@@ -28,7 +28,7 @@ const KakaoMap = forwardRef<KakaoMapHandle, KakaoMapProps>(function KakaoMap({
   markers,
   onMarkerClick,
   onMapClick,
-  center = { lat: 37.5665, lng: 126.978 },
+  center = DEFAULT_CENTER,
   zoom = MAP_ZOOM.DEFAULT,
   moveTo,
   previewPosition,
@@ -90,17 +90,12 @@ const KakaoMap = forwardRef<KakaoMapHandle, KakaoMapProps>(function KakaoMap({
     const moveLatLng = new window.kakao.maps.LatLng(moveTo.lat, moveTo.lng);
     mapInstanceRef.current.setCenter(moveLatLng);
     mapInstanceRef.current.setLevel(MAP_ZOOM.ON_MOVE);
-    setTimeout(() => { programmaticMoveRef.current = false; }, 500);
+    const timer = setTimeout(() => { programmaticMoveRef.current = false; }, 500);
+    return () => clearTimeout(timer);
   }, [mapReady, moveTo]);
 
   // Preview pin
   useEffect(() => {
-    // 기존 임시 핀 제거
-    if (previewPinRef.current) {
-      previewPinRef.current.setMap(null);
-      previewPinRef.current = null;
-    }
-
     if (!mapReady || !mapInstanceRef.current || !previewPosition) return;
 
     const position = new window.kakao.maps.LatLng(previewPosition.lat, previewPosition.lng);
@@ -162,6 +157,12 @@ const KakaoMap = forwardRef<KakaoMapHandle, KakaoMapProps>(function KakaoMap({
 
     overlay.setMap(mapInstanceRef.current);
     previewPinRef.current = overlay;
+
+    return () => {
+      overlay.setMap(null);
+      previewPinRef.current = null;
+      document.getElementById('preview-pin-style')?.remove();
+    };
   }, [mapReady, previewPosition]);
 
   // Map click event
