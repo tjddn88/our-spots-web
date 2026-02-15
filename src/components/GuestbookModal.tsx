@@ -108,10 +108,10 @@ export default function GuestbookModal({ isOpen, onClose }: GuestbookModalProps)
   return (
     <>
       <div className="fixed inset-0 bg-black/40 z-50" onClick={onClose} />
-      <div className="fixed z-50 inset-0 flex items-end sm:items-center justify-center p-4">
+      <div className="fixed z-50 inset-0 flex items-center justify-center pt-28 pb-4 px-4">
         <div
           className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden"
-          style={{ maxHeight: 'min(450px, 70dvh)' }}
+          style={{ maxHeight: 'min(450px, calc(100dvh - 8rem))' }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
