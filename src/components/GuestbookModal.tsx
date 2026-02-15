@@ -86,7 +86,7 @@ export default function GuestbookModal({ isOpen, onClose }: GuestbookModalProps)
   };
 
   const formatTime = (dateStr: string) => {
-    const date = new Date(dateStr);
+    const date = new Date(dateStr + 'Z');
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMin = Math.floor(diffMs / 60000);
