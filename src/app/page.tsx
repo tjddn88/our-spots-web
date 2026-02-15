@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import KakaoMap from '@/components/KakaoMap';
 import type { KakaoMapHandle } from '@/components/KakaoMap';
 import PlaceDetail from '@/components/PlaceDetail';
@@ -23,7 +24,8 @@ import { usePlaceActions } from '@/hooks/usePlaceActions';
 import { useMapSearch } from '@/hooks/useMapSearch';
 import { DEFAULT_CENTER } from '@/constants/placeConfig';
 
-export default function Home() {
+function Home() {
+  const searchParams = useSearchParams();
   const [markers, setMarkers] = useState<Marker[]>([]);
   const [moveTo, setMoveTo] = useState<{ lat: number; lng: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -108,6 +110,26 @@ export default function Home() {
     };
     fetchMarkers();
   }, []);
+
+  // URL addr 파라미터로 초기 위치 설정
+  useEffect(() => {
+    const addr = searchParams.get('addr');
+    if (!addr || !window.kakao?.maps?.services) return;
+
+    let cancelled = false;
+    const timeout = setTimeout(() => { cancelled = true; }, 500);
+
+    const geocoder = new window.kakao.maps.services.Geocoder();
+    geocoder.addressSearch(addr, (result: any[], status: string) => {
+      clearTimeout(timeout);
+      if (cancelled) return;
+      if (status === window.kakao.maps.services.Status.OK && result.length > 0) {
+        setMoveTo({ lat: parseFloat(result[0].y), lng: parseFloat(result[0].x) });
+      }
+    });
+
+    return () => { cancelled = true; clearTimeout(timeout); };
+  }, [searchParams]);
 
   const handleRefreshMarkers = useCallback(async () => {
     setIsRefreshing(true);
@@ -372,5 +394,13 @@ export default function Home() {
       {/* Guestbook Modal */}
       <GuestbookModal isOpen={showGuestbook} onClose={() => setShowGuestbook(false)} />
     </main>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense>
+      <Home />
+    </Suspense>
   );
 }

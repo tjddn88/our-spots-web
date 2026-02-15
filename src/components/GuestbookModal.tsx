@@ -14,7 +14,7 @@ export default function GuestbookModal({ isOpen, onClose }: GuestbookModalProps)
   const [messages, setMessages] = useState<GuestbookMessage[]>([]);
   const [nickname, setNickname] = useState('');
   const [content, setContent] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -22,7 +22,6 @@ export default function GuestbookModal({ isOpen, onClose }: GuestbookModalProps)
 
   const fetchMessages = useCallback(async () => {
     try {
-      setIsLoading(true);
       const data = await guestbookApi.getMessages();
       setMessages(data);
       setError(null);
@@ -127,7 +126,7 @@ export default function GuestbookModal({ isOpen, onClose }: GuestbookModalProps)
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-0">
-            {isLoading ? (
+            {isLoading && messages.length === 0 ? (
               <div className="flex items-center justify-center py-12 text-sm text-gray-400">
                 불러오는 중...
               </div>
@@ -148,7 +147,7 @@ export default function GuestbookModal({ isOpen, onClose }: GuestbookModalProps)
                     {msg.deletable && (
                       <button
                         onClick={() => handleDelete(msg.id)}
-                        className="text-xs text-gray-300 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity ml-auto"
+                        className="text-xs text-gray-400 hover:text-red-500 transition-colors ml-auto"
                       >
                         삭제
                       </button>
