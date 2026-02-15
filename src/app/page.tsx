@@ -12,8 +12,9 @@ import LoginModal from '@/components/LoginModal';
 import PlaceListPopup from '@/components/PlaceListPopup';
 import PlacePreviewCard from '@/components/PlacePreviewCard';
 import AboutModal from '@/components/AboutModal';
+import GuestbookModal from '@/components/GuestbookModal';
 import SearchResultsPanel from '@/components/SearchResultsPanel';
-import { LocationPinIcon, RefreshIcon, LockIcon, UnlockIcon, CurrentLocationIcon, ChatBubbleIcon } from '@/components/icons';
+import { LocationPinIcon, RefreshIcon, LockIcon, UnlockIcon, CurrentLocationIcon, MegaphoneIcon, ChatBubbleIcon } from '@/components/icons';
 import { mapApi } from '@/services/api';
 import { Marker } from '@/types';
 import { useMarkerFilter } from '@/hooks/useMarkerFilter';
@@ -72,6 +73,7 @@ export default function Home() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [showAboutBadge, setShowAboutBadge] = useState(false);
+  const [showGuestbook, setShowGuestbook] = useState(false);
 
   useEffect(() => {
     if (!localStorage.getItem('about-seen')) {
@@ -341,10 +343,17 @@ export default function Home() {
           className="relative bg-white/90 backdrop-blur p-2.5 rounded-full shadow-lg hover:bg-white transition-colors"
           title="프로젝트 소개"
         >
-          <ChatBubbleIcon className="w-5 h-5 text-gray-600" />
+          <MegaphoneIcon className="w-5 h-5 text-gray-600" />
           {showAboutBadge && (
             <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
           )}
+        </button>
+        <button
+          onClick={() => setShowGuestbook(true)}
+          className="bg-white/90 backdrop-blur p-2.5 rounded-full shadow-lg hover:bg-white transition-colors"
+          title="방명록"
+        >
+          <ChatBubbleIcon className="w-5 h-5 text-gray-600" />
         </button>
       </div>
 
@@ -359,6 +368,9 @@ export default function Home() {
 
       {/* About Modal */}
       <AboutModal isOpen={showAbout} onClose={() => setShowAbout(false)} />
+
+      {/* Guestbook Modal */}
+      <GuestbookModal isOpen={showGuestbook} onClose={() => setShowGuestbook(false)} />
     </main>
   );
 }

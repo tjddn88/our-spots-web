@@ -1,4 +1,4 @@
-import { ApiResponse, Marker, Place, PlaceDetail, PlaceType } from '@/types';
+import { ApiResponse, GuestbookMessage, Marker, Place, PlaceDetail, PlaceType } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
 
@@ -136,6 +136,25 @@ export const mapApi = {
   refreshMarkers: () => {
     return fetchApi<Marker[]>('/map/markers/refresh', {
       method: 'POST',
+    });
+  },
+};
+
+export const guestbookApi = {
+  getMessages: () => {
+    return fetchApi<GuestbookMessage[]>('/guestbook');
+  },
+
+  create: (data: { nickname?: string; content: string }) => {
+    return fetchApi<GuestbookMessage>('/guestbook', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete: (id: number) => {
+    return fetchApi<void>(`/guestbook/${id}`, {
+      method: 'DELETE',
     });
   },
 };
