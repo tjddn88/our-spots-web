@@ -22,10 +22,12 @@ import { useMarkerFilter } from '@/hooks/useMarkerFilter';
 import { useAuth } from '@/hooks/useAuth';
 import { usePlaceActions } from '@/hooks/usePlaceActions';
 import { useMapSearch } from '@/hooks/useMapSearch';
+import { useKakaoSDK } from '@/hooks/useKakaoSDK';
 import { DEFAULT_CENTER } from '@/constants/placeConfig';
 
 function Home() {
   const searchParams = useSearchParams();
+  const { isLoaded: isKakaoLoaded } = useKakaoSDK();
   const [markers, setMarkers] = useState<Marker[]>([]);
   const [moveTo, setMoveTo] = useState<{ lat: number; lng: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -114,22 +116,28 @@ function Home() {
   // URL addr 파라미터로 초기 위치 설정
   useEffect(() => {
     const addr = searchParams.get('addr');
-    if (!addr || !window.kakao?.maps?.services) return;
+    if (!addr || !isKakaoLoaded) return;
 
     let cancelled = false;
-    const timeout = setTimeout(() => { cancelled = true; }, 500);
+    const timeout = setTimeout(() => {
+      cancelled = true;
+      console.warn(`[addr] 주소 검색 타임아웃: "${addr}"`);
+    }, 500);
 
     const geocoder = new window.kakao.maps.services.Geocoder();
     geocoder.addressSearch(addr, (result: any[], status: string) => {
       clearTimeout(timeout);
       if (cancelled) return;
       if (status === window.kakao.maps.services.Status.OK && result.length > 0) {
+        console.log(`[addr] 주소 찾음: "${addr}" → (${result[0].y}, ${result[0].x})`);
         setMoveTo({ lat: parseFloat(result[0].y), lng: parseFloat(result[0].x) });
+      } else {
+        console.warn(`[addr] 주소 못 찾음: "${addr}" (status: ${status})`);
       }
     });
 
     return () => { cancelled = true; clearTimeout(timeout); };
-  }, [searchParams]);
+  }, [searchParams, isKakaoLoaded]);
 
   const handleRefreshMarkers = useCallback(async () => {
     setIsRefreshing(true);

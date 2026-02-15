@@ -14,7 +14,8 @@ export default function GuestbookModal({ isOpen, onClose }: GuestbookModalProps)
   const [messages, setMessages] = useState<GuestbookMessage[]>([]);
   const [nickname, setNickname] = useState('');
   const [content, setContent] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const hasFetched = useRef(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -35,7 +36,9 @@ export default function GuestbookModal({ isOpen, onClose }: GuestbookModalProps)
 
   useEffect(() => {
     if (isOpen) {
+      if (!hasFetched.current) setIsLoading(true);
       fetchMessages();
+      hasFetched.current = true;
     }
   }, [isOpen, fetchMessages]);
 
@@ -105,10 +108,10 @@ export default function GuestbookModal({ isOpen, onClose }: GuestbookModalProps)
   return (
     <>
       <div className="fixed inset-0 bg-black/40 z-50" onClick={onClose} />
-      <div className="fixed z-50 inset-0 flex items-center justify-center p-4">
+      <div className="fixed z-50 inset-0 flex items-end sm:items-center justify-center p-4">
         <div
           className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden"
-          style={{ maxHeight: 'min(600px, 80dvh)' }}
+          style={{ maxHeight: 'min(450px, 70dvh)' }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}

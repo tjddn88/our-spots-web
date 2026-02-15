@@ -173,7 +173,7 @@ export const MAP_ZOOM = {
   ON_MOVE: 6,
 } as const;
 
-export const DEFAULT_CENTER = { lat: 37.5665, lng: 126.978 } as const;
+export const DEFAULT_CENTER = { lat: 37.5720, lng: 126.9752 } as const;
 
 // ============================================================================
 // Helper Functions
