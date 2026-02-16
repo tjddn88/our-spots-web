@@ -342,6 +342,7 @@ function Home() {
         <PlacePreviewCard
           name={place.previewPlace.name}
           address={place.previewPlace.address}
+          screenPosition={mapRef.current?.coordToScreenPosition(place.previewPlace.lat, place.previewPlace.lng) ?? null}
           onRegister={place.handlePreviewRegister}
           onClose={place.handlePreviewClose}
         />

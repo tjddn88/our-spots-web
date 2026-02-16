@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { placeApi } from '@/services/api';
 import { Marker, PlaceDetail as PlaceDetailType } from '@/types';
 import { PlaceFormData } from '@/components/PlaceForm';
+import { MAP_ZOOM } from '@/constants/placeConfig';
 
 interface UsePlaceActionsOptions {
   setMarkers: React.Dispatch<React.SetStateAction<Marker[]>>;
@@ -180,7 +181,7 @@ export function usePlaceActions({
   }, []);
 
   const handleSearchSelect = useCallback((result: { lat: number; lng: number; address: string; name?: string }) => {
-    setMoveTo({ lat: result.lat, lng: result.lng });
+    setMoveTo({ lat: result.lat, lng: result.lng, zoom: MAP_ZOOM.ON_MOVE });
     setPreviewPlace({
       lat: result.lat,
       lng: result.lng,

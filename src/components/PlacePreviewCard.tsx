@@ -1,18 +1,34 @@
 'use client';
 
+const CARD_WIDTH = 220;
+const PIN_HEIGHT = 36;
+const MARGIN = 8;
+
 interface PlacePreviewCardProps {
   name: string;
   address: string;
+  screenPosition: { x: number; y: number } | null;
   onRegister: () => void;
   onClose: () => void;
 }
 
-export default function PlacePreviewCard({ name, address, onRegister, onClose }: PlacePreviewCardProps) {
+export default function PlacePreviewCard({ name, address, screenPosition, onRegister, onClose }: PlacePreviewCardProps) {
+  // screenPosition이 있으면 핀 아래에 배치, 없으면 화면 중앙 fallback
+  const style = screenPosition
+    ? {
+        left: Math.max(MARGIN, Math.min(screenPosition.x - CARD_WIDTH / 2, window.innerWidth - CARD_WIDTH - MARGIN)),
+        top: Math.min(screenPosition.y + PIN_HEIGHT, window.innerHeight - 80),
+      }
+    : undefined;
+
   return (
-    <div className="absolute top-[55%] left-1/2 -translate-x-1/2 z-10">
+    <div
+      className={screenPosition ? 'absolute z-10' : 'absolute top-[55%] left-1/2 -translate-x-1/2 z-10'}
+      style={style}
+    >
       <div className="bg-white rounded-xl shadow-lg border border-gray-200 pl-3 pr-2 py-2 flex items-center gap-2">
         <div className="min-w-0 max-w-40">
-          <p className="font-medium text-xs text-gray-900 truncate">{name}</p>
+          <p className="font-medium text-xs text-gray-900 truncate">{name || '새 장소'}</p>
           <p className="text-[10px] text-gray-400 truncate">{address}</p>
         </div>
         <button

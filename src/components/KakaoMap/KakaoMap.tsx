@@ -103,7 +103,9 @@ const KakaoMap = forwardRef<KakaoMapHandle, KakaoMapProps>(function KakaoMap({
     programmaticMoveRef.current = true;
     const moveLatLng = new window.kakao.maps.LatLng(moveTo.lat, moveTo.lng);
     mapInstanceRef.current.setCenter(moveLatLng);
-    mapInstanceRef.current.setLevel(moveTo.zoom ?? MAP_ZOOM.ON_MOVE);
+    if (moveTo.zoom != null) {
+      mapInstanceRef.current.setLevel(moveTo.zoom);
+    }
     const timer = setTimeout(() => { programmaticMoveRef.current = false; }, MAP_SETTLE_MS);
     return () => clearTimeout(timer);
   }, [mapReady, moveTo]);
