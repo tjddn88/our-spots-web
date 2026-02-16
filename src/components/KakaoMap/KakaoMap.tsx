@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import { Marker, SearchResultPlace } from '@/types';
-import { MAP_ZOOM, DEFAULT_CENTER } from '@/constants/placeConfig';
+import { MAP_ZOOM, DEFAULT_CENTER, MAP_SETTLE_MS } from '@/constants/placeConfig';
 import { useKakaoSDK } from '@/hooks/useKakaoSDK';
 import { groupMarkersByCoord, createSingleMarkerHTML, createGroupMarkerHTML, createSearchMarkerHTML } from './markerUtils';
 
@@ -14,7 +14,7 @@ interface KakaoMapProps {
   zoom?: number;
   moveTo?: { lat: number; lng: number; zoom?: number } | null;
   previewPosition?: { lat: number; lng: number } | null;
-  highlightPosition?: { lat: number; lng: number; name: string } | null;
+  highlightPosition?: { lat: number; lng: number } | null;
   searchResults?: SearchResultPlace[];
   onSearchMarkerClick?: (result: SearchResultPlace) => void;
   onMapMoved?: () => void;
@@ -40,11 +40,11 @@ const KakaoMap = forwardRef<KakaoMapHandle, KakaoMapProps>(function KakaoMap({
   onMapMoved,
 }, ref) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const markerInstancesRef = useRef<any[]>([]);
-  const searchMarkerInstancesRef = useRef<any[]>([]);
-  const previewPinRef = useRef<any>(null);
-  const highlightPinRef = useRef<any>(null);
+  const mapInstanceRef = useRef<KakaoMapInstance | null>(null);
+  const markerInstancesRef = useRef<KakaoCustomOverlay[]>([]);
+  const searchMarkerInstancesRef = useRef<KakaoCustomOverlay[]>([]);
+  const previewPinRef = useRef<KakaoCustomOverlay | null>(null);
+  const highlightPinRef = useRef<KakaoCustomOverlay | null>(null);
   const markerClickedRef = useRef(false);
   const programmaticMoveRef = useRef(false);
   const onMapMovedRef = useRef(onMapMoved);
@@ -104,7 +104,7 @@ const KakaoMap = forwardRef<KakaoMapHandle, KakaoMapProps>(function KakaoMap({
     const moveLatLng = new window.kakao.maps.LatLng(moveTo.lat, moveTo.lng);
     mapInstanceRef.current.setCenter(moveLatLng);
     mapInstanceRef.current.setLevel(moveTo.zoom ?? MAP_ZOOM.ON_MOVE);
-    const timer = setTimeout(() => { programmaticMoveRef.current = false; }, 500);
+    const timer = setTimeout(() => { programmaticMoveRef.current = false; }, MAP_SETTLE_MS);
     return () => clearTimeout(timer);
   }, [mapReady, moveTo]);
 
@@ -184,7 +184,6 @@ const KakaoMap = forwardRef<KakaoMapHandle, KakaoMapProps>(function KakaoMap({
     if (!mapReady || !mapInstanceRef.current || !highlightPosition) return;
 
     const position = new window.kakao.maps.LatLng(highlightPosition.lat, highlightPosition.lng);
-    const name = highlightPosition.name;
 
     const pinEl = document.createElement('div');
     pinEl.innerHTML = `
@@ -194,20 +193,6 @@ const KakaoMap = forwardRef<KakaoMapHandle, KakaoMapProps>(function KakaoMap({
         align-items: center;
         animation: highlightBounce 0.5s ease-out;
       ">
-        <div style="
-          background: white;
-          border-radius: 8px;
-          padding: 4px 10px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-          margin-bottom: 6px;
-          font-size: 13px;
-          font-weight: 600;
-          color: #1E40AF;
-          white-space: nowrap;
-          max-width: 200px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        ">${name}</div>
         <div style="
           width: 32px;
           height: 32px;
@@ -268,7 +253,7 @@ const KakaoMap = forwardRef<KakaoMapHandle, KakaoMapProps>(function KakaoMap({
   useEffect(() => {
     if (!mapReady || !mapInstanceRef.current || !onMapClick) return;
 
-    const clickHandler = (mouseEvent: any) => {
+    const clickHandler = (mouseEvent: { latLng: KakaoLatLng }) => {
       // 마커 클릭 직후면 무시
       if (markerClickedRef.current) {
         markerClickedRef.current = false;
@@ -282,10 +267,9 @@ const KakaoMap = forwardRef<KakaoMapHandle, KakaoMapProps>(function KakaoMap({
       // services 라이브러리가 로드되었는지 확인
       if (window.kakao.maps.services?.Geocoder) {
         const geocoder = new window.kakao.maps.services.Geocoder();
-        // 좌표로 주소 검색
-        geocoder.coord2Address(lng, lat, (result: any, status: any) => {
+        geocoder.coord2Address(lng, lat, (result: KakaoGeocoderResult[], status: string) => {
           let address = '';
-          if (status === window.kakao.maps.services.Status.OK && result[0]) {
+          if (status === window.kakao.maps.services!.Status.OK && result[0]) {
             address = result[0].road_address?.address_name || result[0].address?.address_name || '';
           }
           onMapClick({ lat, lng, address });
@@ -298,8 +282,9 @@ const KakaoMap = forwardRef<KakaoMapHandle, KakaoMapProps>(function KakaoMap({
 
     window.kakao.maps.event.addListener(mapInstanceRef.current, 'click', clickHandler);
 
+    const mapInstance = mapInstanceRef.current;
     return () => {
-      window.kakao.maps.event.removeListener(mapInstanceRef.current, 'click', clickHandler);
+      window.kakao.maps.event.removeListener(mapInstance, 'click', clickHandler);
     };
   }, [mapReady, onMapClick]);
 
@@ -317,15 +302,14 @@ const KakaoMap = forwardRef<KakaoMapHandle, KakaoMapProps>(function KakaoMap({
       }, 300);
     };
 
-    window.kakao.maps.event.addListener(mapInstanceRef.current, 'dragend', handleMoved);
-    window.kakao.maps.event.addListener(mapInstanceRef.current, 'zoom_changed', handleMoved);
+    const mapInstance = mapInstanceRef.current;
+    window.kakao.maps.event.addListener(mapInstance, 'dragend', handleMoved);
+    window.kakao.maps.event.addListener(mapInstance, 'zoom_changed', handleMoved);
 
     return () => {
       clearTimeout(timer);
-      if (mapInstanceRef.current) {
-        window.kakao.maps.event.removeListener(mapInstanceRef.current, 'dragend', handleMoved);
-        window.kakao.maps.event.removeListener(mapInstanceRef.current, 'zoom_changed', handleMoved);
-      }
+      window.kakao.maps.event.removeListener(mapInstance, 'dragend', handleMoved);
+      window.kakao.maps.event.removeListener(mapInstance, 'zoom_changed', handleMoved);
     };
   }, [mapReady]);
 

@@ -1,10 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { authApi, isLoggedIn } from '@/services/api';
-
-interface UseAuthOptions {
-  onLogin: () => void;
-  onLogout: () => void;
-}
 
 interface UseAuthReturn {
   isAuthenticated: boolean;
@@ -17,29 +12,21 @@ interface UseAuthReturn {
   handleLogout: () => void;
 }
 
-export function useAuth({
-  onLogin,
-  onLogout,
-}: UseAuthOptions): UseAuthReturn {
+export function useAuth(): UseAuthReturn {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginError, setLoginError] = useState<string | undefined>();
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   useEffect(() => {
-    const loggedIn = isLoggedIn();
-    setIsAuthenticated(loggedIn);
-    if (loggedIn) {
-      onLogin();
-    }
+    setIsAuthenticated(isLoggedIn());
 
     const handleAuthExpired = () => {
       setIsAuthenticated(false);
-      onLogout();
     };
     window.addEventListener('auth-expired', handleAuthExpired);
     return () => window.removeEventListener('auth-expired', handleAuthExpired);
-  }, [onLogin, onLogout]);
+  }, []);
 
   const handleLogin = useCallback(async (password: string) => {
     setIsLoggingIn(true);
@@ -48,19 +35,17 @@ export function useAuth({
       await authApi.login(password);
       setIsAuthenticated(true);
       setShowLoginModal(false);
-      onLogin();
     } catch (err) {
       setLoginError(err instanceof Error ? err.message : '로그인에 실패했습니다');
     } finally {
       setIsLoggingIn(false);
     }
-  }, [onLogin]);
+  }, []);
 
   const handleLogout = useCallback(() => {
     authApi.logout();
     setIsAuthenticated(false);
-    onLogout();
-  }, [onLogout]);
+  }, []);
 
   return {
     isAuthenticated,

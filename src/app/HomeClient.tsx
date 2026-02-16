@@ -26,44 +26,28 @@ import { usePlaceActions } from '@/hooks/usePlaceActions';
 import { useMapSearch } from '@/hooks/useMapSearch';
 import { useKakaoSDK } from '@/hooks/useKakaoSDK';
 import { useToast } from '@/hooks/useToast';
-import { DEFAULT_CENTER, MAP_ZOOM } from '@/constants/placeConfig';
+import { DEFAULT_CENTER, MAP_ZOOM, MAP_SETTLE_MS, GEOCODE_TIMEOUT_MS } from '@/constants/placeConfig';
 
 function Home() {
   const searchParams = useSearchParams();
   const { isLoaded: isKakaoLoaded } = useKakaoSDK();
   const [markers, setMarkers] = useState<Marker[]>([]);
   const [moveTo, setMoveTo] = useState<{ lat: number; lng: number; zoom?: number } | null>(null);
-  const [highlightPosition, setHighlightPosition] = useState<{ lat: number; lng: number; name: string } | null>(null);
+  const [highlightPosition, setHighlightPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const mapRef = useRef<KakaoMapHandle>(null);
   const headerRef = useRef<HTMLElement>(null);
   const [headerHeight, setHeaderHeight] = useState(0);
 
-  // Auth hook (called before useMarkerFilter so we have isAuthenticated)
-  // Uses onLogin/onLogout callbacks that will be wired to filter after
-  const filterCallbacksRef = useRef<{ enableMyFootprint: () => void; disablePersonalTypes: () => void }>({
-    enableMyFootprint: () => {},
-    disablePersonalTypes: () => {},
-  });
+  const auth = useAuth();
 
-  const auth = useAuth({
-    onLogin: useCallback(() => filterCallbacksRef.current.enableMyFootprint(), []),
-    onLogout: useCallback(() => filterCallbacksRef.current.disablePersonalTypes(), []),
-  });
-
-  // Marker filter hook
   const {
     filteredMarkers,
     selectedTypes,
     selectedGrades,
     handleTypeToggle,
     setSelectedGrades,
-    enableMyFootprint,
-    disablePersonalTypes,
   } = useMarkerFilter({ markers, isAuthenticated: auth.isAuthenticated });
-
-  // Wire filter callbacks to auth via ref
-  filterCallbacksRef.current = { enableMyFootprint, disablePersonalTypes };
 
   // Place actions hook
   const place = usePlaceActions({ setMarkers, setMoveTo });
@@ -138,13 +122,13 @@ function Home() {
     const timeout = setTimeout(() => {
       cancelled = true;
       console.warn(`[addr] 주소 검색 타임아웃: "${addr}"`);
-    }, 500);
+    }, GEOCODE_TIMEOUT_MS);
 
-    const geocoder = new window.kakao.maps.services.Geocoder();
-    geocoder.addressSearch(addr, (result: any[], status: string) => {
+    const geocoder = new window.kakao.maps.services!.Geocoder();
+    geocoder.addressSearch(addr, (result: KakaoGeocoderResult[], status: string) => {
       clearTimeout(timeout);
       if (cancelled) return;
-      if (status === window.kakao.maps.services.Status.OK && result.length > 0) {
+      if (status === window.kakao.maps.services!.Status.OK && result.length > 0) {
         console.log(`[addr] 주소 찾음: "${addr}" → (${result[0].y}, ${result[0].x})`);
         setMoveTo({ lat: parseFloat(result[0].y), lng: parseFloat(result[0].x) });
       } else {
@@ -163,29 +147,27 @@ function Home() {
     if (isNaN(id)) return;
 
     let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
     (async () => {
       try {
         const placeData = await placeApi.getById(id);
         if (cancelled) return;
-        // 파란 핀 표시
-        setHighlightPosition({ lat: placeData.latitude, lng: placeData.longitude, name: placeData.name });
+        setHighlightPosition({ lat: placeData.latitude, lng: placeData.longitude });
         setMoveTo({ lat: placeData.latitude, lng: placeData.longitude, zoom: MAP_ZOOM.DEFAULT });
-        // 지도 이동 후 마커 화면 좌표를 얻기 위해 대기
-        setTimeout(() => {
+        timer = setTimeout(() => {
           if (cancelled) return;
           const screenPos = mapRef.current?.coordToScreenPosition(placeData.latitude, placeData.longitude);
-          // 핀 아래쪽에 패널 표시 (핀을 가리지 않도록)
           const pos = screenPos
             ? { x: screenPos.x, y: screenPos.y + 60 }
             : { x: window.innerWidth / 2, y: window.innerHeight / 2 };
           place.openPlaceById(id, pos);
-        }, 500);
+        }, MAP_SETTLE_MS);
       } catch (err) {
         console.warn(`[place] 장소를 찾을 수 없습니다: id=${placeId}`, err);
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => { cancelled = true; clearTimeout(timer); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
@@ -234,7 +216,7 @@ function Home() {
         onMarkerClick={place.handleMarkerClick}
         onMapClick={place.handleMapClick}
         center={DEFAULT_CENTER}
-        zoom={3}
+        zoom={MAP_ZOOM.DEFAULT}
         moveTo={moveTo}
         previewPosition={place.previewPlace ? { lat: place.previewPlace.lat, lng: place.previewPlace.lng } : null}
         highlightPosition={highlightPosition}

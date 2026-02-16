@@ -3,14 +3,15 @@
 import { useState, useRef, useCallback } from 'react';
 import { useClickOutside } from '@/hooks/useClickOutside';
 
+// KakaoPlaceSearchResult 에 road_address 등이 추가된 로컬 확장 타입
 interface SearchResult {
   place_name: string;
   address_name: string;
   road_address_name?: string;
   category_group_name?: string;
   phone?: string;
-  x: string; // longitude
-  y: string; // latitude
+  x: string;
+  y: string;
 }
 
 interface AddressSearchProps {
@@ -41,21 +42,21 @@ export default function AddressSearch({
     const ps = new window.kakao.maps.services.Places();
 
     // 1. 키워드 검색
-    ps.keywordSearch(query, (keywordData: SearchResult[], keywordStatus: any) => {
+    ps.keywordSearch(query, (keywordData: KakaoPlaceSearchResult[], keywordStatus: string) => {
       const keywordResults: SearchResult[] = [];
-      if (keywordStatus === window.kakao.maps.services.Status.OK) {
+      if (keywordStatus === window.kakao.maps.services!.Status.OK) {
         keywordResults.push(...keywordData.slice(0, 5));
       }
 
       // 2. 주소 검색
-      geocoder.addressSearch(query, (addressData: any[], addressStatus: any) => {
+      geocoder.addressSearch(query, (addressData: KakaoGeocoderResult[], addressStatus: string) => {
         setIsSearching(false);
 
         const addressResults: SearchResult[] = [];
-        if (addressStatus === window.kakao.maps.services.Status.OK) {
-          addressResults.push(...addressData.slice(0, 3).map((item: any) => ({
-            place_name: item.road_address?.building_name || item.address_name,
-            address_name: item.address_name,
+        if (addressStatus === window.kakao.maps.services!.Status.OK) {
+          addressResults.push(...addressData.slice(0, 3).map((item) => ({
+            place_name: item.road_address?.address_name || (item.address?.address_name ?? ''),
+            address_name: item.address?.address_name ?? '',
             road_address_name: item.road_address?.address_name,
             x: item.x,
             y: item.y,

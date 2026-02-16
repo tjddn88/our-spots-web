@@ -79,7 +79,7 @@ export default function PlaceDetail({ place, isLoading, onClose, onEdit, onDelet
 
   const handleCopyLink = async () => {
     if (!place) return;
-    const url = `https://ourspots.life?place=${place.id}`;
+    const url = `${window.location.origin}?place=${place.id}`;
     try {
       await navigator.clipboard.writeText(url);
     } catch {

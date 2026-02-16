@@ -175,6 +175,12 @@ export const MAP_ZOOM = {
 
 export const DEFAULT_CENTER = { lat: 37.5720, lng: 126.9752 } as const;
 
+// 지도 프로그래밍 이동 후 안정화 대기 시간 (ms)
+export const MAP_SETTLE_MS = 500;
+
+// 주소 검색 타임아웃 (ms)
+export const GEOCODE_TIMEOUT_MS = 500;
+
 // ============================================================================
 // Helper Functions
 // ============================================================================

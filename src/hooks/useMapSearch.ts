@@ -52,7 +52,7 @@ export function useMapSearch({
 
     const rect = `${bounds.sw.lng},${bounds.sw.lat},${bounds.ne.lng},${bounds.ne.lat}`;
 
-    const baseOptions: any = {
+    const baseOptions: Record<string, unknown> = {
       rect,
       size: 15,
     };
@@ -63,21 +63,21 @@ export function useMapSearch({
       baseOptions.sort = window.kakao.maps.services.SortBy.DISTANCE;
     }
 
-    const processResults = (allData: any[]) => {
+    const processResults = (allData: KakaoPlaceSearchResult[]) => {
       if (center) {
         lastSearchCenterRef.current = center;
       }
 
       if (allData.length > 0) {
         const seen = new Set<string>();
-        const unique = allData.filter((item: any) => {
+        const unique = allData.filter((item) => {
           const key = `${item.place_name}_${item.x}_${item.y}`;
           if (seen.has(key)) return false;
           seen.add(key);
           return true;
         });
 
-        const results: SearchResultPlace[] = unique.slice(0, 15).map((item: any, index: number) => ({
+        const results: SearchResultPlace[] = unique.slice(0, 15).map((item, index) => ({
           label: String.fromCharCode(65 + index),
           name: item.place_name,
           category: item.category_group_name || '',
@@ -99,14 +99,14 @@ export function useMapSearch({
 
     ps.keywordSearch(
       keyword,
-      (data1: any[], status1: any) => {
-        const page1 = status1 === window.kakao.maps.services.Status.OK ? data1 : [];
+      (data1: KakaoPlaceSearchResult[], status1: string) => {
+        const page1 = status1 === window.kakao.maps.services!.Status.OK ? data1 : [];
 
         if (page1.length >= 15) {
           ps.keywordSearch(
             keyword,
-            (data2: any[], status2: any) => {
-              const page2 = status2 === window.kakao.maps.services.Status.OK ? data2 : [];
+            (data2: KakaoPlaceSearchResult[], status2: string) => {
+              const page2 = status2 === window.kakao.maps.services!.Status.OK ? data2 : [];
               processResults([...page1, ...page2]);
             },
             { ...baseOptions, page: 2 }

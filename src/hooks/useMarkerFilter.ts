@@ -1,6 +1,6 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Marker, PlaceType } from '@/types';
-import { PUBLIC_TYPES, PERSONAL_TYPES } from '@/constants/placeConfig';
+import { PUBLIC_TYPES, PERSONAL_TYPES, GRADE_LABELS } from '@/constants/placeConfig';
 
 interface UseMarkerFilterOptions {
   markers: Marker[];
@@ -13,10 +13,9 @@ interface UseMarkerFilterReturn {
   selectedGrades: Set<number>;
   handleTypeToggle: (type: PlaceType | null) => void;
   setSelectedGrades: (grades: Set<number>) => void;
-  enableMyFootprint: () => void;
-  disablePersonalTypes: () => void;
 }
 
+const ALL_GRADES = new Set(GRADE_LABELS.map(g => g.grade));
 const DEFAULT_GRADES = new Set([1, 2]); // 기본: 최애, 추천
 
 /**
@@ -31,6 +30,25 @@ export function useMarkerFilter({
 }: UseMarkerFilterOptions): UseMarkerFilterReturn {
   const [selectedTypes, setSelectedTypes] = useState<Set<PlaceType>>(new Set(PUBLIC_TYPES));
   const [selectedGrades, setSelectedGrades] = useState<Set<number>>(DEFAULT_GRADES);
+  const prevAuthRef = useRef(isAuthenticated);
+
+  // 로그인/로그아웃 시 개인 카테고리 자동 토글
+  useEffect(() => {
+    const wasAuthenticated = prevAuthRef.current;
+    prevAuthRef.current = isAuthenticated;
+
+    if (!wasAuthenticated && isAuthenticated) {
+      // 로그인: "나의 발자취" 활성화
+      setSelectedTypes(prev => new Set([...prev, 'MY_FOOTPRINT']));
+    } else if (wasAuthenticated && !isAuthenticated) {
+      // 로그아웃: 개인 카테고리 해제
+      setSelectedTypes(prev => {
+        const next = new Set(prev);
+        PERSONAL_TYPES.forEach(t => next.delete(t));
+        return next;
+      });
+    }
+  }, [isAuthenticated]);
 
   // 타입 + 등급 필터링된 마커 (비로그인 시 개인 카테고리 숨김)
   const filteredMarkers = useMemo(() => {
@@ -45,8 +63,9 @@ export function useMarkerFilter({
     result = result.filter(m => selectedTypes.has(m.type));
 
     // 등급 필터 (공개 카테고리만 적용, 개인 카테고리는 항상 표시)
+    const allGradesSelected = ALL_GRADES.size === selectedGrades.size && [...ALL_GRADES].every(g => selectedGrades.has(g));
     if (selectedGrades.size === 0) return result.filter(m => PERSONAL_TYPES.includes(m.type));
-    if (selectedGrades.size === 3) return result;
+    if (allGradesSelected) return result;
     return result.filter(m => PERSONAL_TYPES.includes(m.type) || (m.grade && selectedGrades.has(m.grade)));
   }, [markers, selectedTypes, selectedGrades, isAuthenticated]);
 
@@ -59,10 +78,8 @@ export function useMarkerFilter({
         // "전체" 클릭: 토글 동작
         const allPublicSelected = PUBLIC_TYPES.every(t => prev.has(t));
         if (allPublicSelected) {
-          // 이미 전체 선택 상태 → 공개 3타입 모두 해제
           PUBLIC_TYPES.forEach(t => next.delete(t));
         } else {
-          // 전체가 아님 → 공개 3타입 전체 선택
           PUBLIC_TYPES.forEach(t => next.add(t));
         }
         return next;
@@ -81,11 +98,9 @@ export function useMarkerFilter({
       // 공개 타입 클릭
       const allPublicSelected = PUBLIC_TYPES.every(t => prev.has(t));
       if (allPublicSelected) {
-        // 전체 상태에서 클릭 → 나머지 공개 타입 해제, 클릭한 것만
         PUBLIC_TYPES.forEach(t => next.delete(t));
         next.add(type);
       } else {
-        // 개별 선택 상태 → 토글
         if (next.has(type)) {
           next.delete(type);
         } else {
@@ -96,27 +111,11 @@ export function useMarkerFilter({
     });
   }, []);
 
-  // 로그인 시 "나의 발자취" 활성화
-  const enableMyFootprint = useCallback(() => {
-    setSelectedTypes(prev => new Set([...prev, 'MY_FOOTPRINT']));
-  }, []);
-
-  // 로그아웃 시 개인 카테고리 해제
-  const disablePersonalTypes = useCallback(() => {
-    setSelectedTypes(prev => {
-      const next = new Set(prev);
-      PERSONAL_TYPES.forEach(t => next.delete(t));
-      return next;
-    });
-  }, []);
-
   return {
     filteredMarkers,
     selectedTypes,
     selectedGrades,
     handleTypeToggle,
     setSelectedGrades,
-    enableMyFootprint,
-    disablePersonalTypes,
   };
 }

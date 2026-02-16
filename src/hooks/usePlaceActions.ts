@@ -88,9 +88,11 @@ export function usePlaceActions({
   }, [fetchAndShowPlace]);
 
   const handleGroupMarkerSelect = useCallback(async (marker: Marker) => {
+    if (!groupPosition) return;
+    const pos = groupPosition;
     setGroupMarkers(null);
     setGroupPosition(null);
-    await fetchAndShowPlace(marker.id, groupPosition!);
+    await fetchAndShowPlace(marker.id, pos);
   }, [groupPosition, fetchAndShowPlace]);
 
   const handleCloseGroupPopup = useCallback(() => {

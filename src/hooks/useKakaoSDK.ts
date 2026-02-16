@@ -2,12 +2,6 @@
 
 import { useEffect, useState } from 'react';
 
-declare global {
-  interface Window {
-    kakao: any;
-  }
-}
-
 const KAKAO_APP_KEY = process.env.NEXT_PUBLIC_KAKAO_MAP_APP_KEY || '';
 
 export function useKakaoSDK() {
@@ -25,7 +19,7 @@ export function useKakaoSDK() {
     const existingScript = document.querySelector('script[src*="dapi.kakao.com"]');
     if (existingScript) {
       existingScript.remove();
-      delete (window as any).kakao;
+      (window as { kakao?: KakaoNamespace }).kakao = undefined as unknown as KakaoNamespace;
     }
 
     const script = document.createElement('script');

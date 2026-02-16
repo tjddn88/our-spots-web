@@ -2,20 +2,20 @@
 
 import { useState, useCallback } from 'react';
 
-const SHARE_URL = 'https://ourspots.life';
+const getShareUrl = () => typeof window !== 'undefined' ? window.location.origin : 'https://ourspots.life';
 
 export default function ShareLinkButton() {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(SHARE_URL);
+      await navigator.clipboard.writeText(getShareUrl());
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
       // fallback for older browsers
       const textarea = document.createElement('textarea');
-      textarea.value = SHARE_URL;
+      textarea.value = getShareUrl();
       textarea.style.position = 'fixed';
       textarea.style.opacity = '0';
       document.body.appendChild(textarea);
