@@ -15,7 +15,7 @@ export default function PlaceListPopup({ markers, position, onSelect, onClose }:
   const { LIST_WIDTH: popupWidth, LIST_MAX_HEIGHT: popupMaxHeight } = PANEL_DIMENSIONS;
 
   const adjustedPosition = typeof window !== 'undefined'
-    ? clampPosition(position, { width: popupWidth, height: popupMaxHeight, leftFallbackOffset: 60 })
+    ? clampPosition(position, { width: popupWidth, height: popupMaxHeight })
     : position;
 
   return (

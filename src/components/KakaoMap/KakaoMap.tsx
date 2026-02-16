@@ -8,12 +8,13 @@ import { groupMarkersByCoord, createSingleMarkerHTML, createGroupMarkerHTML, cre
 
 interface KakaoMapProps {
   markers: Marker[];
-  onMarkerClick: (markers: Marker[], position: { x: number; y: number }) => void;
+  onMarkerClick: (markers: Marker[], position: { x: number; y: number; markerCenter?: { x: number; y: number; w: number; h: number } }) => void;
   onMapClick?: (latlng: { lat: number; lng: number; address?: string }) => void;
   center?: { lat: number; lng: number };
   zoom?: number;
-  moveTo?: { lat: number; lng: number } | null;
+  moveTo?: { lat: number; lng: number; zoom?: number } | null;
   previewPosition?: { lat: number; lng: number } | null;
+  highlightPosition?: { lat: number; lng: number; name: string } | null;
   searchResults?: SearchResultPlace[];
   onSearchMarkerClick?: (result: SearchResultPlace) => void;
   onMapMoved?: () => void;
@@ -22,6 +23,7 @@ interface KakaoMapProps {
 export interface KakaoMapHandle {
   getBounds: () => { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } } | null;
   getCenter: () => { lat: number; lng: number } | null;
+  coordToScreenPosition: (lat: number, lng: number) => { x: number; y: number } | null;
 }
 
 const KakaoMap = forwardRef<KakaoMapHandle, KakaoMapProps>(function KakaoMap({
@@ -32,6 +34,7 @@ const KakaoMap = forwardRef<KakaoMapHandle, KakaoMapProps>(function KakaoMap({
   zoom = MAP_ZOOM.DEFAULT,
   moveTo,
   previewPosition,
+  highlightPosition,
   searchResults = [],
   onSearchMarkerClick,
   onMapMoved,
@@ -41,6 +44,7 @@ const KakaoMap = forwardRef<KakaoMapHandle, KakaoMapProps>(function KakaoMap({
   const markerInstancesRef = useRef<any[]>([]);
   const searchMarkerInstancesRef = useRef<any[]>([]);
   const previewPinRef = useRef<any>(null);
+  const highlightPinRef = useRef<any>(null);
   const markerClickedRef = useRef(false);
   const programmaticMoveRef = useRef(false);
   const onMapMovedRef = useRef(onMapMoved);
@@ -63,6 +67,16 @@ const KakaoMap = forwardRef<KakaoMapHandle, KakaoMapProps>(function KakaoMap({
       if (!mapInstanceRef.current) return null;
       const center = mapInstanceRef.current.getCenter();
       return { lat: center.getLat(), lng: center.getLng() };
+    },
+    coordToScreenPosition: (lat: number, lng: number) => {
+      if (!mapInstanceRef.current) return null;
+      const projection = mapInstanceRef.current.getProjection();
+      const latlng = new window.kakao.maps.LatLng(lat, lng);
+      const point = projection.containerPointFromCoords(latlng);
+      const mapEl = mapRef.current;
+      if (!mapEl) return null;
+      const rect = mapEl.getBoundingClientRect();
+      return { x: rect.left + point.x, y: rect.top + point.y };
     },
   }));
 
@@ -89,7 +103,7 @@ const KakaoMap = forwardRef<KakaoMapHandle, KakaoMapProps>(function KakaoMap({
     programmaticMoveRef.current = true;
     const moveLatLng = new window.kakao.maps.LatLng(moveTo.lat, moveTo.lng);
     mapInstanceRef.current.setCenter(moveLatLng);
-    mapInstanceRef.current.setLevel(MAP_ZOOM.ON_MOVE);
+    mapInstanceRef.current.setLevel(moveTo.zoom ?? MAP_ZOOM.ON_MOVE);
     const timer = setTimeout(() => { programmaticMoveRef.current = false; }, 500);
     return () => clearTimeout(timer);
   }, [mapReady, moveTo]);
@@ -164,6 +178,91 @@ const KakaoMap = forwardRef<KakaoMapHandle, KakaoMapProps>(function KakaoMap({
       document.getElementById('preview-pin-style')?.remove();
     };
   }, [mapReady, previewPosition]);
+
+  // Highlight pin (deep link)
+  useEffect(() => {
+    if (!mapReady || !mapInstanceRef.current || !highlightPosition) return;
+
+    const position = new window.kakao.maps.LatLng(highlightPosition.lat, highlightPosition.lng);
+    const name = highlightPosition.name;
+
+    const pinEl = document.createElement('div');
+    pinEl.innerHTML = `
+      <div style="
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        animation: highlightBounce 0.5s ease-out;
+      ">
+        <div style="
+          background: white;
+          border-radius: 8px;
+          padding: 4px 10px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+          margin-bottom: 6px;
+          font-size: 13px;
+          font-weight: 600;
+          color: #1E40AF;
+          white-space: nowrap;
+          max-width: 200px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        ">${name}</div>
+        <div style="
+          width: 32px;
+          height: 32px;
+          background: #2563EB;
+          border: 3px solid white;
+          border-radius: 50% 50% 50% 0;
+          transform: rotate(-45deg);
+          box-shadow: 0 3px 12px rgba(37,99,235,0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        ">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="white" style="transform: rotate(45deg);">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+          </svg>
+        </div>
+        <div style="
+          width: 10px;
+          height: 10px;
+          background: rgba(37,99,235,0.25);
+          border-radius: 50%;
+          margin-top: 2px;
+        "></div>
+      </div>
+    `;
+
+    if (!document.getElementById('highlight-pin-style')) {
+      const style = document.createElement('style');
+      style.id = 'highlight-pin-style';
+      style.textContent = `
+        @keyframes highlightBounce {
+          0% { transform: translateY(-30px); opacity: 0; }
+          60% { transform: translateY(5px); opacity: 1; }
+          100% { transform: translateY(0); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    const overlay = new window.kakao.maps.CustomOverlay({
+      position,
+      content: pinEl,
+      yAnchor: 1,
+      xAnchor: 0.5,
+    });
+
+    overlay.setMap(mapInstanceRef.current);
+    highlightPinRef.current = overlay;
+
+    return () => {
+      overlay.setMap(null);
+      highlightPinRef.current = null;
+      document.getElementById('highlight-pin-style')?.remove();
+    };
+  }, [mapReady, highlightPosition]);
 
   // Map click event
   useEffect(() => {
@@ -255,9 +354,12 @@ const KakaoMap = forwardRef<KakaoMapHandle, KakaoMapProps>(function KakaoMap({
         e.stopPropagation();
         markerClickedRef.current = true;
         const rect = content.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
         onMarkerClick(markersAtLocation, {
           x: rect.right + 8,
-          y: rect.top
+          y: rect.top,
+          markerCenter: { x: cx, y: cy, w: rect.width + 16, h: rect.height + 16 },
         });
       };
 

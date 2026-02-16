@@ -4,7 +4,7 @@ import { SearchResultPlace } from '@/types';
 
 interface UseMapSearchOptions {
   mapRef: React.RefObject<KakaoMapHandle | null>;
-  setMoveTo: (moveTo: { lat: number; lng: number } | null) => void;
+  setMoveTo: (moveTo: { lat: number; lng: number; zoom?: number } | null) => void;
   setPreviewPlace: (place: { lat: number; lng: number; address: string; name: string } | null) => void;
   clearPanels: () => void;
   clearDetailPanels: () => void;

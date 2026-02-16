@@ -12,7 +12,7 @@ interface PlaceDetailProps {
   onClose: () => void;
   onEdit?: (place: PlaceDetailType) => void;
   onDelete?: (placeId: number) => Promise<void>;
-  position: { x: number; y: number } | null;
+  position: { x: number; y: number; markerCenter?: { x: number; y: number; w: number; h: number } } | null;
   isAuthenticated: boolean;
   onToast?: (message: string, type: 'success' | 'error' | 'info') => void;
   showConfirm?: (message: string, onConfirm: () => void, isDestructive?: boolean) => void;
@@ -94,6 +94,7 @@ export default function PlaceDetail({ place, isLoading, onClose, onEdit, onDelet
   const adjusted = clampPosition(position, {
     width: PANEL_DIMENSIONS.DETAIL_WIDTH,
     height: PANEL_DIMENSIONS.DETAIL_HEIGHT,
+    markerCenter: position.markerCenter,
   });
 
   return (
@@ -220,29 +221,7 @@ export default function PlaceDetail({ place, isLoading, onClose, onEdit, onDelet
               )}
 
               {/* Action Buttons */}
-              <div className="flex flex-col gap-2 pt-2 border-t mt-3">
-                <button
-                  onClick={handleCopyLink}
-                  className="w-full py-1.5 px-3 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-center gap-1.5"
-                >
-                  {isLinkCopied ? (
-                    <>
-                      <svg className="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      링크 복사됨
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.172 13.828a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.102 1.101" />
-                      </svg>
-                      링크 복사
-                    </>
-                  )}
-                </button>
-                <div className="flex gap-2">
+              <div className="flex gap-2 pt-2 border-t mt-3">
                 <button
                   onClick={handleEdit}
                   className="flex-1 py-1.5 px-3 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
@@ -256,7 +235,12 @@ export default function PlaceDetail({ place, isLoading, onClose, onEdit, onDelet
                 >
                   {isDeleting ? '삭제 중...' : '삭제'}
                 </button>
-                </div>
+                <button
+                  onClick={handleCopyLink}
+                  className="flex-1 py-1.5 px-3 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  {isLinkCopied ? '복사됨' : '공유'}
+                </button>
               </div>
             </div>
           ) : null}

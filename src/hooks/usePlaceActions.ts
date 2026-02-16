@@ -5,20 +5,20 @@ import { PlaceFormData } from '@/components/PlaceForm';
 
 interface UsePlaceActionsOptions {
   setMarkers: React.Dispatch<React.SetStateAction<Marker[]>>;
-  setMoveTo: (moveTo: { lat: number; lng: number } | null) => void;
+  setMoveTo: (moveTo: { lat: number; lng: number; zoom?: number } | null) => void;
 }
 
 interface UsePlaceActionsReturn {
   selectedPlace: PlaceDetailType | null;
   isLoadingPlace: boolean;
-  panelPosition: { x: number; y: number } | null;
+  panelPosition: { x: number; y: number; markerCenter?: { x: number; y: number; w: number; h: number } } | null;
   groupMarkers: Marker[] | null;
   groupPosition: { x: number; y: number } | null;
   newPlaceCoords: { lat: number; lng: number; address?: string; name?: string } | null;
   editingPlace: PlaceDetailType | null;
   previewPlace: { lat: number; lng: number; address: string; name: string } | null;
   setPreviewPlace: (place: { lat: number; lng: number; address: string; name: string } | null) => void;
-  handleMarkerClick: (markers: Marker[], position: { x: number; y: number }) => void;
+  handleMarkerClick: (markers: Marker[], position: { x: number; y: number; markerCenter?: { x: number; y: number; w: number; h: number } }) => void;
   handleGroupMarkerSelect: (marker: Marker) => void;
   handleCloseGroupPopup: () => void;
   handleCloseDetail: () => void;
@@ -31,7 +31,7 @@ interface UsePlaceActionsReturn {
   handlePreviewRegister: () => void;
   handlePreviewClose: () => void;
   handleSearchSelect: (result: { lat: number; lng: number; address: string; name?: string }) => void;
-  openPlaceById: (id: number, position: { x: number; y: number }) => Promise<void>;
+  openPlaceById: (id: number, position: { x: number; y: number; markerCenter?: { x: number; y: number; w: number; h: number } }) => Promise<void>;
   clearPanels: () => void;
   clearDetailPanels: () => void;
 }
@@ -42,7 +42,7 @@ export function usePlaceActions({
 }: UsePlaceActionsOptions): UsePlaceActionsReturn {
   const [selectedPlace, setSelectedPlace] = useState<PlaceDetailType | null>(null);
   const [isLoadingPlace, setIsLoadingPlace] = useState(false);
-  const [panelPosition, setPanelPosition] = useState<{ x: number; y: number } | null>(null);
+  const [panelPosition, setPanelPosition] = useState<{ x: number; y: number; markerCenter?: { x: number; y: number; w: number; h: number } } | null>(null);
   const [groupMarkers, setGroupMarkers] = useState<Marker[] | null>(null);
   const [groupPosition, setGroupPosition] = useState<{ x: number; y: number } | null>(null);
   const [newPlaceCoords, setNewPlaceCoords] = useState<{ lat: number; lng: number; address?: string; name?: string } | null>(null);
@@ -61,7 +61,7 @@ export function usePlaceActions({
     setPreviewPlace(null);
   }, [clearDetailPanels]);
 
-  const fetchAndShowPlace = useCallback(async (markerId: number, position: { x: number; y: number }) => {
+  const fetchAndShowPlace = useCallback(async (markerId: number, position: { x: number; y: number; markerCenter?: { x: number; y: number; w: number; h: number } }) => {
     setPanelPosition(position);
     setIsLoadingPlace(true);
     try {
@@ -74,7 +74,7 @@ export function usePlaceActions({
     }
   }, []);
 
-  const handleMarkerClick = useCallback(async (markers: Marker[], position: { x: number; y: number }) => {
+  const handleMarkerClick = useCallback(async (markers: Marker[], position: { x: number; y: number; markerCenter?: { x: number; y: number; w: number; h: number } }) => {
     if (markers.length > 1) {
       setGroupMarkers(markers);
       setGroupPosition(position);
@@ -182,7 +182,7 @@ export function usePlaceActions({
     setGroupPosition(null);
   }, [setMoveTo]);
 
-  const openPlaceById = useCallback(async (id: number, position: { x: number; y: number }) => {
+  const openPlaceById = useCallback(async (id: number, position: { x: number; y: number; markerCenter?: { x: number; y: number; w: number; h: number } }) => {
     await fetchAndShowPlace(id, position);
   }, [fetchAndShowPlace]);
 

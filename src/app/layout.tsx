@@ -28,6 +28,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://ourspots.life"),
   title: "OurSpots",
   description: "우리가 함께 만드는 장소 지도",
   icons: {
@@ -45,15 +46,15 @@ export const metadata: Metadata = {
     description: "우리가 함께 만드는 장소 지도",
     url: "https://ourspots.life",
     siteName: "OurSpots",
-    images: [{ url: "/icon-512x512.png", width: 512, height: 512 }],
+    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
     locale: "ko_KR",
     type: "website",
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "OurSpots",
     description: "우리가 함께 만드는 장소 지도",
-    images: ["/icon-512x512.png"],
+    images: ["/og-image.png"],
   },
 };
 
