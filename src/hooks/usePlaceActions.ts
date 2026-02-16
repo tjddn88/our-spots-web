@@ -22,7 +22,7 @@ interface UsePlaceActionsReturn {
   handleGroupMarkerSelect: (marker: Marker) => void;
   handleCloseGroupPopup: () => void;
   handleCloseDetail: () => void;
-  handleMapClick: () => void;
+  handleMapClick: (latlng?: { lat?: number; lng?: number; address?: string }) => void;
   handleCreatePlace: (data: PlaceFormData) => Promise<void>;
   handleUpdatePlace: (data: PlaceFormData) => Promise<void>;
   handleDeletePlace: (placeId: number) => Promise<void>;
@@ -105,8 +105,17 @@ export function usePlaceActions({
     setPanelPosition(null);
   }, []);
 
-  const handleMapClick = useCallback(() => {
+  const handleMapClick = useCallback((latlng?: { lat?: number; lng?: number; address?: string }) => {
     clearPanels();
+    // Ctrl+Click: 좌표가 있으면 장소 등록 미리보기 진입
+    if (latlng?.lat != null && latlng?.lng != null) {
+      setPreviewPlace({
+        lat: latlng.lat,
+        lng: latlng.lng,
+        address: latlng.address || '',
+        name: '',
+      });
+    }
   }, [clearPanels]);
 
   const handleCreatePlace = useCallback(async (data: PlaceFormData) => {

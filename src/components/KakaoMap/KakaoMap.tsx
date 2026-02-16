@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
+import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { Marker, SearchResultPlace } from '@/types';
 import { MAP_ZOOM, DEFAULT_CENTER, MAP_SETTLE_MS } from '@/constants/placeConfig';
 import { useKakaoSDK } from '@/hooks/useKakaoSDK';
@@ -9,7 +9,7 @@ import { groupMarkersByCoord, createSingleMarkerHTML, createGroupMarkerHTML, cre
 interface KakaoMapProps {
   markers: Marker[];
   onMarkerClick: (markers: Marker[], position: { x: number; y: number; markerCenter?: { x: number; y: number; w: number; h: number } }) => void;
-  onMapClick?: (latlng: { lat: number; lng: number; address?: string }) => void;
+  onMapClick?: (latlng: { lat?: number; lng?: number; address?: string }) => void;
   center?: { lat: number; lng: number };
   zoom?: number;
   moveTo?: { lat: number; lng: number; zoom?: number } | null;
@@ -249,44 +249,133 @@ const KakaoMap = forwardRef<KakaoMapHandle, KakaoMapProps>(function KakaoMap({
     };
   }, [mapReady, highlightPosition]);
 
-  // Map click event
+  // 역지오코딩 후 onMapClick 호출하는 공통 헬퍼
+  const onMapClickRef = useRef(onMapClick);
+  onMapClickRef.current = onMapClick;
+  const reverseGeocodeAndClick = useCallback((lat: number, lng: number) => {
+    if (window.kakao.maps.services?.Geocoder) {
+      const geocoder = new window.kakao.maps.services.Geocoder();
+      geocoder.coord2Address(lng, lat, (result: KakaoGeocoderResult[], status: string) => {
+        let address = '';
+        if (status === window.kakao.maps.services!.Status.OK && result[0]) {
+          address = result[0].road_address?.address_name || result[0].address?.address_name || '';
+        }
+        onMapClickRef.current?.({ lat, lng, address });
+      });
+    } else {
+      onMapClickRef.current?.({ lat, lng });
+    }
+  }, []);
+
+  // Map click event (Ctrl+Click → 장소 등록, 일반 클릭 → 패널 닫기)
   useEffect(() => {
     if (!mapReady || !mapInstanceRef.current || !onMapClick) return;
 
+    let lastCtrlClick = false;
+    const container = mapRef.current;
+    const captureModifier = (e: MouseEvent) => {
+      lastCtrlClick = e.ctrlKey || e.metaKey;
+    };
+    container?.addEventListener('mousedown', captureModifier);
+
     const clickHandler = (mouseEvent: { latLng: KakaoLatLng }) => {
-      // 마커 클릭 직후면 무시
       if (markerClickedRef.current) {
         markerClickedRef.current = false;
         return;
       }
-
-      const latlng = mouseEvent.latLng;
-      const lat = latlng.getLat();
-      const lng = latlng.getLng();
-
-      // services 라이브러리가 로드되었는지 확인
-      if (window.kakao.maps.services?.Geocoder) {
-        const geocoder = new window.kakao.maps.services.Geocoder();
-        geocoder.coord2Address(lng, lat, (result: KakaoGeocoderResult[], status: string) => {
-          let address = '';
-          if (status === window.kakao.maps.services!.Status.OK && result[0]) {
-            address = result[0].road_address?.address_name || result[0].address?.address_name || '';
-          }
-          onMapClick({ lat, lng, address });
-        });
-      } else {
-        // services 없으면 주소 없이 전달
-        onMapClick({ lat, lng });
+      if (!lastCtrlClick) {
+        onMapClick({});
+        return;
       }
+      reverseGeocodeAndClick(mouseEvent.latLng.getLat(), mouseEvent.latLng.getLng());
     };
 
     window.kakao.maps.event.addListener(mapInstanceRef.current, 'click', clickHandler);
 
     const mapInstance = mapInstanceRef.current;
     return () => {
+      container?.removeEventListener('mousedown', captureModifier);
       window.kakao.maps.event.removeListener(mapInstance, 'click', clickHandler);
     };
-  }, [mapReady, onMapClick]);
+  }, [mapReady, onMapClick, reverseGeocodeAndClick]);
+
+  // 모바일 롱프레스 → 장소 등록 미리보기
+  useEffect(() => {
+    if (!mapReady || !mapInstanceRef.current || !onMapClick) return;
+    const container = mapRef.current;
+    if (!container) return;
+
+    const LONG_PRESS_MS = 600;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let startX = 0;
+    let startY = 0;
+    let fired = false;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      fired = false;
+
+      timer = setTimeout(() => {
+        fired = true;
+        // 롱프레스 위치를 지도 좌표로 변환
+        const map = mapInstanceRef.current;
+        if (!map) return;
+        const proj = map.getProjection();
+        const bounds = container.getBoundingClientRect();
+        const point = { x: startX - bounds.left, y: startY - bounds.top };
+        // containerPointToCoords는 카카오맵에서 제공하지 않으므로
+        // 지도 중심 + 오프셋으로 계산
+        const centerPoint = proj.containerPointFromCoords(map.getCenter());
+        const dx = point.x - centerPoint.x;
+        const dy = point.y - centerPoint.y;
+        // 줌 레벨에 따른 스케일 근사 (카카오맵은 containerPointFromCoords/coordsFromContainerPoint 쌍 미제공)
+        // 대신 bounds의 두 모서리를 이용해 px당 좌표를 계산
+        const mapBounds = map.getBounds();
+        const sw = mapBounds.getSouthWest();
+        const ne = mapBounds.getNorthEast();
+        const lngPerPx = (ne.getLng() - sw.getLng()) / bounds.width;
+        const latPerPx = (ne.getLat() - sw.getLat()) / bounds.height;
+        const center = map.getCenter();
+        const lat = center.getLat() - dy * latPerPx;
+        const lng = center.getLng() + dx * lngPerPx;
+        reverseGeocodeAndClick(lat, lng);
+      }, LONG_PRESS_MS);
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!timer) return;
+      const dx = e.touches[0].clientX - startX;
+      const dy = e.touches[0].clientY - startY;
+      if (Math.sqrt(dx * dx + dy * dy) > 10) {
+        clearTimeout(timer);
+        timer = null;
+      }
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+      // 롱프레스가 발동된 경우 후속 click 이벤트 방지
+      if (fired) {
+        e.preventDefault();
+      }
+    };
+
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchmove', handleTouchMove, { passive: true });
+    container.addEventListener('touchend', handleTouchEnd);
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [mapReady, onMapClick, reverseGeocodeAndClick]);
 
   // Map moved events (dragend, zoom_changed) — 사용자 조작 시만
   useEffect(() => {
