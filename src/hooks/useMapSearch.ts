@@ -19,6 +19,7 @@ interface UseMapSearchReturn {
   handleSearchKeyword: (keyword: string) => void;
   handleMapMoved: () => void;
   handleResearch: () => void;
+  dismissResearchButton: () => void;
   handleSearchResultSelect: (result: SearchResultPlace) => void;
   handleCloseSearchResults: () => void;
 }
@@ -148,6 +149,10 @@ export function useMapSearch({
     performMapSearch(searchKeywordRef.current);
   }, [performMapSearch]);
 
+  const dismissResearchButton = useCallback(() => {
+    setShowResearchButton(false);
+  }, []);
+
   const handleSearchResultSelect = useCallback((result: SearchResultPlace) => {
     setMoveTo({ lat: result.lat, lng: result.lng });
     setPreviewPlace({
@@ -176,6 +181,7 @@ export function useMapSearch({
     handleSearchKeyword,
     handleMapMoved,
     handleResearch,
+    dismissResearchButton,
     handleSearchResultSelect,
     handleCloseSearchResults,
   };

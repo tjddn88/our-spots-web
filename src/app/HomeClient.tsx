@@ -275,10 +275,9 @@ function Home() {
       </header>
 
       {/* 플로팅 "현 지도에서 검색" 버튼 */}
-      <button
-        onClick={search.handleResearch}
+      <div
         style={{ top: `${headerHeight + 12}px` }}
-        className={`absolute -translate-x-1/2 z-20 bg-white border border-blue-400 text-blue-600 px-4 py-2 rounded-full text-sm font-medium shadow-lg hover:bg-blue-50 active:bg-blue-100 transition-all duration-300 ${
+        className={`absolute -translate-x-1/2 z-20 flex items-center gap-0 bg-white border border-blue-400 rounded-full shadow-lg transition-all duration-300 ${
           search.showResearchButton && search.searchKeyword
             ? 'opacity-100 translate-y-0'
             : 'opacity-0 -translate-y-2 pointer-events-none'
@@ -288,8 +287,22 @@ function Home() {
             : 'left-1/2'
         }`}
       >
-        ↻ 현 지도에서 검색
-      </button>
+        <button
+          onClick={search.handleResearch}
+          className="text-blue-600 pl-4 pr-2 py-2 text-sm font-medium hover:bg-blue-50 active:bg-blue-100 rounded-l-full transition-colors"
+        >
+          ↻ 현 지도에서 검색
+        </button>
+        <button
+          onClick={search.dismissResearchButton}
+          className="text-gray-400 hover:text-gray-600 pr-3 pl-1 py-2 rounded-r-full hover:bg-gray-100 transition-colors"
+          aria-label="닫기"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
 
       {/* 검색 결과 없음 토스트 */}
       {search.searchToast && (

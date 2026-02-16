@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { PlaceDetail as PlaceDetailType, PlaceType } from '@/types';
 import { TYPE_CONFIG, getGradeLabel, PANEL_DIMENSIONS } from '@/constants/placeConfig';
 import { clampPosition } from '@/utils/position';
@@ -25,9 +25,45 @@ export default function PlaceDetail({ place, isLoading, onClose, onEdit, onDelet
   const copyTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const linkTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
+  // 모바일 드래그 시트 상태
+  const [translateY, setTranslateY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const startYRef = useRef(0);
+  const sheetRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     return () => { clearTimeout(copyTimerRef.current); clearTimeout(linkTimerRef.current); };
   }, []);
+
+  // 패널이 열릴 때 모바일 드래그 위치 초기화
+  useEffect(() => {
+    if (position) setTranslateY(0);
+  }, [position]);
+
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    setIsDragging(true);
+    startYRef.current = e.clientY - translateY;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, [translateY]);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!isDragging) return;
+    const dy = e.clientY - startYRef.current;
+    setTranslateY(Math.max(0, dy));
+  }, [isDragging]);
+
+  const handlePointerUp = useCallback(() => {
+    if (!isDragging) return;
+    setIsDragging(false);
+
+    const sheetHeight = sheetRef.current?.offsetHeight || 0;
+    if (translateY > sheetHeight * 0.5) {
+      onClose();
+      setTranslateY(0);
+    } else {
+      setTranslateY(0);
+    }
+  }, [isDragging, translateY, onClose]);
 
   const handleCopyAddress = async () => {
     if (!place?.address) return;
@@ -97,155 +133,188 @@ export default function PlaceDetail({ place, isLoading, onClose, onEdit, onDelet
     markerCenter: position.markerCenter,
   });
 
-  return (
-    <div
-      className="fixed z-50 w-72 max-h-80"
-      style={{
-        left: `${adjusted.x}px`,
-        top: `${adjusted.y}px`,
-      }}
-    >
-      <div className="bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-80">
-        {/* Header */}
-        <div className="flex items-center justify-between p-3 border-b sticky top-0 bg-white">
-          <div className="flex flex-col gap-1 flex-1 min-w-0">
-            {isLoading ? (
-              <div className="h-5 w-24 bg-gray-200 animate-pulse rounded" />
-            ) : (
-              <>
-                <span className="text-sm font-bold">{place?.name}</span>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {place?.type && TYPE_CONFIG[place.type] && (
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${TYPE_CONFIG[place.type].color}`}>
-                      {TYPE_CONFIG[place.type].emoji} {TYPE_CONFIG[place.type].label}
-                    </span>
-                  )}
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                    getGradeLabel(place?.type as PlaceType, place?.grade).color
-                  }`}>
-                    {getGradeLabel(place?.type as PlaceType, place?.grade).label}
-                  </span>
-                </div>
-              </>
-            )}
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0 ml-2"
-            aria-label="닫기"
-          >
-            <CloseIcon />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="overflow-y-auto p-3 flex-1">
-          {isLoading ? (
-            <div className="space-y-3">
-              <div className="h-3 w-full bg-gray-200 animate-pulse rounded" />
-              <div className="h-3 w-3/4 bg-gray-200 animate-pulse rounded" />
-            </div>
-          ) : place ? (
-            <div className="space-y-3">
-              {/* Address */}
-              <div className="flex items-start gap-1.5 text-xs text-gray-600">
-                <svg className="w-3 h-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <span className="flex-1">{place.address}</span>
-                <button
-                  onClick={handleCopyAddress}
-                  className="p-0.5 hover:bg-gray-100 rounded transition-colors flex-shrink-0"
-                  aria-label="주소 복사"
-                >
-                  {isCopied ? (
-                    <svg className="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  ) : (
-                    <svg className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-
-              {/* Review Links */}
-              <div className="rounded-lg border border-gray-200 divide-y divide-gray-200 overflow-hidden">
-                <a
-                  href={place.googlePlaceId
-                    ? `https://www.google.com/maps/place/?q=place_id:${place.googlePlaceId}`
-                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name + ' ' + place.address)}`
-                  }
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 p-2 hover:bg-gray-50 transition-colors"
-                >
-                  <span className="text-sm">🔵</span>
-                  <span className="text-xs font-medium text-blue-700">Google</span>
-                  {place.googleRating && (
-                    <div className="flex items-center gap-1 ml-1">
-                      <span className="text-yellow-500 text-xs">★</span>
-                      <span className="text-xs font-semibold text-gray-700">{place.googleRating.toFixed(1)}</span>
-                      {place.googleRatingsTotal && (
-                        <span className="text-[10px] text-gray-400">({place.googleRatingsTotal.toLocaleString()})</span>
-                      )}
-                    </div>
-                  )}
-                  <span className="text-[10px] text-blue-500 ml-auto">리뷰 →</span>
-                </a>
-                <a
-                  href={`https://search.naver.com/search.naver?query=${encodeURIComponent(
-                    place.address.split(' ').slice(0, 2).join(' ') + ' ' + place.name
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 p-2 hover:bg-gray-50 transition-colors"
-                >
-                  <span className="text-sm">🟢</span>
-                  <span className="text-xs font-medium text-green-700">Naver</span>
-                  <span className="text-[10px] text-green-500 ml-auto">검색 →</span>
-                </a>
-              </div>
-
-              {/* Description */}
-              {place.description ? (
-                <p className="text-xs text-gray-700 py-2">
-                  {place.description}
-                </p>
-              ) : (
-                <p className="text-xs text-gray-400 text-center py-2">
-                  등록된 설명이 없습니다
-                </p>
+  // 공통 헤더
+  const header = (
+    <div className="flex items-center justify-between p-3 border-b bg-white">
+      <div className="flex flex-col gap-1 flex-1 min-w-0">
+        {isLoading ? (
+          <div className="h-5 w-24 bg-gray-200 animate-pulse rounded" />
+        ) : (
+          <>
+            <span className="text-sm font-bold">{place?.name}</span>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {place?.type && TYPE_CONFIG[place.type] && (
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${TYPE_CONFIG[place.type].color}`}>
+                  {TYPE_CONFIG[place.type].emoji} {TYPE_CONFIG[place.type].label}
+                </span>
               )}
-
-              {/* Action Buttons */}
-              <div className="flex gap-2 pt-2 border-t mt-3">
-                <button
-                  onClick={handleEdit}
-                  className="flex-1 py-1.5 px-3 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
-                >
-                  수정
-                </button>
-                <button
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className="flex-1 py-1.5 px-3 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors disabled:opacity-50"
-                >
-                  {isDeleting ? '삭제 중...' : '삭제'}
-                </button>
-                <button
-                  onClick={handleCopyLink}
-                  className="flex-1 py-1.5 px-3 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  {isLinkCopied ? '복사됨' : '공유'}
-                </button>
-              </div>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                getGradeLabel(place?.type as PlaceType, place?.grade).color
+              }`}>
+                {getGradeLabel(place?.type as PlaceType, place?.grade).label}
+              </span>
             </div>
-          ) : null}
+          </>
+        )}
+      </div>
+      <button
+        onClick={onClose}
+        className="p-1 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0 ml-2"
+        aria-label="닫기"
+      >
+        <CloseIcon />
+      </button>
+    </div>
+  );
+
+  // 공통 콘텐츠
+  const content = (
+    <div className="overflow-y-auto p-3 flex-1" style={{ overscrollBehavior: 'contain' }}>
+      {isLoading ? (
+        <div className="space-y-3">
+          <div className="h-3 w-full bg-gray-200 animate-pulse rounded" />
+          <div className="h-3 w-3/4 bg-gray-200 animate-pulse rounded" />
+        </div>
+      ) : place ? (
+        <div className="space-y-3">
+          {/* Address */}
+          <div className="flex items-start gap-1.5 text-xs text-gray-600">
+            <svg className="w-3 h-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span className="flex-1">{place.address}</span>
+            <button
+              onClick={handleCopyAddress}
+              className="p-0.5 hover:bg-gray-100 rounded transition-colors flex-shrink-0"
+              aria-label="주소 복사"
+            >
+              {isCopied ? (
+                <svg className="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              ) : (
+                <svg className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              )}
+            </button>
+          </div>
+
+          {/* Review Links */}
+          <div className="rounded-lg border border-gray-200 divide-y divide-gray-200 overflow-hidden">
+            <a
+              href={place.googlePlaceId
+                ? `https://www.google.com/maps/place/?q=place_id:${place.googlePlaceId}`
+                : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name + ' ' + place.address)}`
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 p-2 hover:bg-gray-50 transition-colors"
+            >
+              <span className="text-sm">🔵</span>
+              <span className="text-xs font-medium text-blue-700">Google</span>
+              {place.googleRating && (
+                <div className="flex items-center gap-1 ml-1">
+                  <span className="text-yellow-500 text-xs">★</span>
+                  <span className="text-xs font-semibold text-gray-700">{place.googleRating.toFixed(1)}</span>
+                  {place.googleRatingsTotal && (
+                    <span className="text-[10px] text-gray-400">({place.googleRatingsTotal.toLocaleString()})</span>
+                  )}
+                </div>
+              )}
+              <span className="text-[10px] text-blue-500 ml-auto">리뷰 →</span>
+            </a>
+            <a
+              href={`https://search.naver.com/search.naver?query=${encodeURIComponent(
+                place.address.split(' ').slice(0, 2).join(' ') + ' ' + place.name
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 p-2 hover:bg-gray-50 transition-colors"
+            >
+              <span className="text-sm">🟢</span>
+              <span className="text-xs font-medium text-green-700">Naver</span>
+              <span className="text-[10px] text-green-500 ml-auto">검색 →</span>
+            </a>
+          </div>
+
+          {/* Description */}
+          {place.description ? (
+            <p className="text-xs text-gray-700 py-2">
+              {place.description}
+            </p>
+          ) : (
+            <p className="text-xs text-gray-400 text-center py-2">
+              등록된 설명이 없습니다
+            </p>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex gap-2 pt-2 border-t mt-3">
+            <button
+              onClick={handleEdit}
+              className="flex-1 py-1.5 px-3 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+            >
+              수정
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="flex-1 py-1.5 px-3 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors disabled:opacity-50"
+            >
+              {isDeleting ? '삭제 중...' : '삭제'}
+            </button>
+            <button
+              onClick={handleCopyLink}
+              className="flex-1 py-1.5 px-3 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              {isLinkCopied ? '복사됨' : '공유'}
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+
+  return (
+    <>
+      {/* 모바일: 하단 드래그 시트 */}
+      <div
+        ref={sheetRef}
+        className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.15)] rounded-t-xl max-h-[55dvh] flex flex-col overflow-hidden"
+        style={{
+          transform: `translateY(${translateY}px)`,
+          transition: isDragging ? 'none' : 'transform 0.25s ease-out',
+        }}
+      >
+        {/* 드래그 핸들 */}
+        <div
+          className="flex justify-center pt-2.5 pb-1 shrink-0 cursor-grab active:cursor-grabbing touch-none"
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+        >
+          <div className="w-10 h-1 bg-gray-300 rounded-full" />
+        </div>
+        {header}
+        {content}
+      </div>
+
+      {/* 데스크탑: 플로팅 패널 */}
+      <div
+        className="hidden sm:block fixed z-50 w-72 max-h-80"
+        style={{
+          left: `${adjusted.x}px`,
+          top: `${adjusted.y}px`,
+        }}
+      >
+        <div className="bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-80">
+          {header}
+          {content}
         </div>
       </div>
-    </div>
+    </>
   );
 }
