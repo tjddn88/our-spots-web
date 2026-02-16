@@ -367,12 +367,16 @@ const KakaoMap = forwardRef<KakaoMapHandle, KakaoMapProps>(function KakaoMap({
       }
     };
 
+    // 롱프레스 시 브라우저 기본 컨텍스트 메뉴 방지
+    const preventContext = (e: Event) => { e.preventDefault(); };
+    container.addEventListener('contextmenu', preventContext);
     container.addEventListener('touchstart', handleTouchStart, { passive: true });
     container.addEventListener('touchmove', handleTouchMove, { passive: true });
     container.addEventListener('touchend', handleTouchEnd);
 
     return () => {
       if (timer) clearTimeout(timer);
+      container.removeEventListener('contextmenu', preventContext);
       container.removeEventListener('touchstart', handleTouchStart);
       container.removeEventListener('touchmove', handleTouchMove);
       container.removeEventListener('touchend', handleTouchEnd);
@@ -502,7 +506,7 @@ const KakaoMap = forwardRef<KakaoMapHandle, KakaoMapProps>(function KakaoMap({
     );
   }
 
-  return <div ref={mapRef} className="h-full w-full" />;
+  return <div ref={mapRef} className="h-full w-full select-none" style={{ WebkitTouchCallout: 'none' }} />;
 });
 
 export default KakaoMap;
