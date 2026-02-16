@@ -28,7 +28,7 @@ export default function AboutModal({ isOpen, onClose }: AboutModalProps) {
                 맛집을 정리하다 보니 하나의 지도가 완성되었습니다.
               </p>
               <p>
-                &lsquo;하민이네 대동여지도&rsquo;는 개인 경험을 기반으로 정리한
+                &lsquo;OurSpots&rsquo;는 개인 경험을 기반으로 정리한
                 토이 프로젝트이며, 가까운 사람들과 정보를 공유하기 위해
                 제작되었습니다.
               </p>

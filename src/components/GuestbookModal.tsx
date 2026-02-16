@@ -8,9 +8,11 @@ import { CloseIcon } from '@/components/icons';
 interface GuestbookModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onToast?: (message: string, type: 'success' | 'error' | 'info') => void;
+  showConfirm?: (message: string, onConfirm: () => void, isDestructive?: boolean) => void;
 }
 
-export default function GuestbookModal({ isOpen, onClose }: GuestbookModalProps) {
+export default function GuestbookModal({ isOpen, onClose, onToast, showConfirm }: GuestbookModalProps) {
   const [messages, setMessages] = useState<GuestbookMessage[]>([]);
   const [nickname, setNickname] = useState('');
   const [content, setContent] = useState('');
@@ -71,12 +73,20 @@ export default function GuestbookModal({ isOpen, onClose }: GuestbookModalProps)
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('삭제하시겠습니까?')) return;
-    try {
-      await guestbookApi.delete(id);
-      setMessages((prev) => prev.filter((m) => m.id !== id));
-    } catch (err) {
-      alert(err instanceof Error ? err.message : '삭제에 실패했습니다.');
+    const doDelete = async () => {
+      try {
+        await guestbookApi.delete(id);
+        setMessages((prev) => prev.filter((m) => m.id !== id));
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : '삭제에 실패했습니다.';
+        if (onToast) onToast(msg, 'error');
+        else setError(msg);
+      }
+    };
+    if (showConfirm) {
+      showConfirm('삭제하시겠습니까?', doDelete, true);
+    } else {
+      await doDelete();
     }
   };
 

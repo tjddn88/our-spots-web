@@ -14,15 +14,19 @@ interface PlaceDetailProps {
   onDelete?: (placeId: number) => Promise<void>;
   position: { x: number; y: number } | null;
   isAuthenticated: boolean;
+  onToast?: (message: string, type: 'success' | 'error' | 'info') => void;
+  showConfirm?: (message: string, onConfirm: () => void, isDestructive?: boolean) => void;
 }
 
-export default function PlaceDetail({ place, isLoading, onClose, onEdit, onDelete, position, isAuthenticated }: PlaceDetailProps) {
+export default function PlaceDetail({ place, isLoading, onClose, onEdit, onDelete, position, isAuthenticated, onToast, showConfirm }: PlaceDetailProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [isLinkCopied, setIsLinkCopied] = useState(false);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const linkTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
-    return () => clearTimeout(copyTimerRef.current);
+    return () => { clearTimeout(copyTimerRef.current); clearTimeout(linkTimerRef.current); };
   }, []);
 
   const handleCopyAddress = async () => {
@@ -37,6 +41,26 @@ export default function PlaceDetail({ place, isLoading, onClose, onEdit, onDelet
     }
   };
 
+  const handleCopyLink = async () => {
+    if (!place) return;
+    const url = `https://ourspots.life?place=${place.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      const textarea = document.createElement('textarea');
+      textarea.value = url;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+    setIsLinkCopied(true);
+    clearTimeout(linkTimerRef.current);
+    linkTimerRef.current = setTimeout(() => setIsLinkCopied(false), 2000);
+  };
+
   const handleEdit = () => {
     if (!place) return;
     onEdit?.(place);
@@ -45,17 +69,23 @@ export default function PlaceDetail({ place, isLoading, onClose, onEdit, onDelet
   const handleDelete = async () => {
     if (!place) return;
     if (!isAuthenticated) {
-      alert('로그인 후 이용해주세요');
+      onToast?.('로그인 후 이용해주세요', 'error');
       return;
     }
-    if (!window.confirm(`"${place.name}" 장소를 삭제하시겠습니까?`)) return;
-    setIsDeleting(true);
-    try {
-      await onDelete?.(place.id);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : '삭제에 실패했습니다');
-    } finally {
-      setIsDeleting(false);
+    const doDelete = async () => {
+      setIsDeleting(true);
+      try {
+        await onDelete?.(place.id);
+      } catch (err) {
+        onToast?.(err instanceof Error ? err.message : '삭제에 실패했습니다', 'error');
+      } finally {
+        setIsDeleting(false);
+      }
+    };
+    if (showConfirm) {
+      showConfirm(`"${place.name}" 장소를 삭제하시겠습니까?`, doDelete, true);
+    } else {
+      await doDelete();
     }
   };
 
@@ -189,8 +219,30 @@ export default function PlaceDetail({ place, isLoading, onClose, onEdit, onDelet
                 </p>
               )}
 
-              {/* Edit/Delete Buttons */}
-              <div className="flex gap-2 pt-2 border-t mt-3">
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-2 pt-2 border-t mt-3">
+                <button
+                  onClick={handleCopyLink}
+                  className="w-full py-1.5 px-3 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                >
+                  {isLinkCopied ? (
+                    <>
+                      <svg className="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      링크 복사됨
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.172 13.828a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.102 1.101" />
+                      </svg>
+                      링크 복사
+                    </>
+                  )}
+                </button>
+                <div className="flex gap-2">
                 <button
                   onClick={handleEdit}
                   className="flex-1 py-1.5 px-3 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
@@ -204,6 +256,7 @@ export default function PlaceDetail({ place, isLoading, onClose, onEdit, onDelet
                 >
                   {isDeleting ? '삭제 중...' : '삭제'}
                 </button>
+                </div>
               </div>
             </div>
           ) : null}

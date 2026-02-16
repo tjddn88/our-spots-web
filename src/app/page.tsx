@@ -15,14 +15,17 @@ import PlacePreviewCard from '@/components/PlacePreviewCard';
 import AboutModal from '@/components/AboutModal';
 import GuestbookModal from '@/components/GuestbookModal';
 import SearchResultsPanel from '@/components/SearchResultsPanel';
+import ToastContainer from '@/components/Toast';
+import ConfirmModal from '@/components/ConfirmModal';
 import { LocationPinIcon, RefreshIcon, LockIcon, UnlockIcon, CurrentLocationIcon, MegaphoneIcon, ChatBubbleIcon } from '@/components/icons';
-import { mapApi } from '@/services/api';
+import { mapApi, placeApi } from '@/services/api';
 import { Marker } from '@/types';
 import { useMarkerFilter } from '@/hooks/useMarkerFilter';
 import { useAuth } from '@/hooks/useAuth';
 import { usePlaceActions } from '@/hooks/usePlaceActions';
 import { useMapSearch } from '@/hooks/useMapSearch';
 import { useKakaoSDK } from '@/hooks/useKakaoSDK';
+import { useToast } from '@/hooks/useToast';
 import { DEFAULT_CENTER } from '@/constants/placeConfig';
 
 function Home() {
@@ -72,6 +75,18 @@ function Home() {
     clearPanels: place.clearPanels,
     clearDetailPanels: place.clearDetailPanels,
   });
+
+  // Toast & Confirm
+  const { toasts, showToast, removeToast } = useToast();
+  const [confirmState, setConfirmState] = useState<{
+    message: string;
+    onConfirm: () => void;
+    isDestructive?: boolean;
+  } | null>(null);
+
+  const showConfirm = useCallback((message: string, onConfirm: () => void, isDestructive?: boolean) => {
+    setConfirmState({ message, onConfirm, isDestructive });
+  }, []);
 
   // About modal & refresh state
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -139,6 +154,31 @@ function Home() {
     return () => { cancelled = true; clearTimeout(timeout); };
   }, [searchParams, isKakaoLoaded]);
 
+  // URL place 파라미터로 장소 상세 자동 오픈
+  useEffect(() => {
+    const placeId = searchParams.get('place');
+    if (!placeId) return;
+    const id = parseInt(placeId, 10);
+    if (isNaN(id)) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const placeData = await placeApi.getById(id);
+        if (cancelled) return;
+        setMoveTo({ lat: placeData.latitude, lng: placeData.longitude });
+        const centerX = typeof window !== 'undefined' ? window.innerWidth / 2 : 400;
+        const centerY = typeof window !== 'undefined' ? window.innerHeight / 2 : 300;
+        place.openPlaceById(id, { x: centerX, y: centerY });
+      } catch (err) {
+        console.warn(`[place] 장소를 찾을 수 없습니다: id=${placeId}`, err);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   const handleRefreshMarkers = useCallback(async () => {
     setIsRefreshing(true);
     try {
@@ -153,7 +193,7 @@ function Home() {
 
   const handleMoveToCurrentLocation = useCallback(() => {
     if (!navigator.geolocation) {
-      alert('이 브라우저에서는 위치 서비스를 지원하지 않습니다.');
+      showToast('이 브라우저에서는 위치 서비스를 지원하지 않습니다.', 'error');
       return;
     }
 
@@ -166,14 +206,14 @@ function Home() {
       },
       (err) => {
         if (err.code === err.PERMISSION_DENIED) {
-          alert('위치 권한이 거부되었습니다. 브라우저 설정에서 위치 권한을 허용해주세요.');
+          showToast('위치 권한이 거부되었습니다. 브라우저 설정에서 위치 권한을 허용해주세요.', 'error');
         } else {
-          alert('현재 위치를 가져올 수 없습니다.');
+          showToast('현재 위치를 가져올 수 없습니다.', 'error');
         }
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
-  }, []);
+  }, [showToast]);
 
   return (
     <main className="relative h-dvh w-screen overflow-hidden">
@@ -277,6 +317,8 @@ function Home() {
         onDelete={place.handleDeletePlace}
         position={place.panelPosition}
         isAuthenticated={auth.isAuthenticated}
+        onToast={showToast}
+        showConfirm={showConfirm}
       />
 
       {/* Place List Popup (같은 위치에 여러 장소) */}
@@ -400,7 +442,20 @@ function Home() {
       <AboutModal isOpen={showAbout} onClose={() => setShowAbout(false)} />
 
       {/* Guestbook Modal */}
-      <GuestbookModal isOpen={showGuestbook} onClose={() => setShowGuestbook(false)} />
+      <GuestbookModal isOpen={showGuestbook} onClose={() => setShowGuestbook(false)} onToast={showToast} showConfirm={showConfirm} />
+
+      {/* Toast */}
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+
+      {/* Confirm Modal */}
+      {confirmState && (
+        <ConfirmModal
+          message={confirmState.message}
+          isDestructive={confirmState.isDestructive}
+          onConfirm={() => { confirmState.onConfirm(); setConfirmState(null); }}
+          onCancel={() => setConfirmState(null)}
+        />
+      )}
     </main>
   );
 }

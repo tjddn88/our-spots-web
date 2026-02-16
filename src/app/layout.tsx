@@ -40,6 +40,21 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "OurSpots",
   },
+  openGraph: {
+    title: "OurSpots",
+    description: "우리가 함께 만드는 장소 지도",
+    url: "https://ourspots.life",
+    siteName: "OurSpots",
+    images: [{ url: "/icon-512x512.png", width: 512, height: 512 }],
+    locale: "ko_KR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "OurSpots",
+    description: "우리가 함께 만드는 장소 지도",
+    images: ["/icon-512x512.png"],
+  },
 };
 
 export default function RootLayout({

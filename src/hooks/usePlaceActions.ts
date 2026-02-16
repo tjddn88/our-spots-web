@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { mapApi, placeApi } from '@/services/api';
+import { placeApi } from '@/services/api';
 import { Marker, PlaceDetail as PlaceDetailType } from '@/types';
 import { PlaceFormData } from '@/components/PlaceForm';
 
@@ -31,6 +31,7 @@ interface UsePlaceActionsReturn {
   handlePreviewRegister: () => void;
   handlePreviewClose: () => void;
   handleSearchSelect: (result: { lat: number; lng: number; address: string; name?: string }) => void;
+  openPlaceById: (id: number, position: { x: number; y: number }) => Promise<void>;
   clearPanels: () => void;
   clearDetailPanels: () => void;
 }
@@ -107,10 +108,17 @@ export function usePlaceActions({
   }, [clearPanels]);
 
   const handleCreatePlace = useCallback(async (data: PlaceFormData) => {
-    await placeApi.create(data);
+    const created = await placeApi.create(data);
     setNewPlaceCoords(null);
-    const newMarkers = await mapApi.getMarkers();
-    setMarkers(newMarkers);
+    const newMarker: Marker = {
+      id: created.id,
+      name: created.name,
+      type: created.type,
+      latitude: created.latitude,
+      longitude: created.longitude,
+      grade: created.grade,
+    };
+    setMarkers(prev => [...prev, newMarker]);
   }, [setMarkers]);
 
   const handleCloseForm = useCallback(() => {
@@ -126,10 +134,16 @@ export function usePlaceActions({
 
   const handleUpdatePlace = useCallback(async (data: PlaceFormData) => {
     if (!editingPlace) return;
-    await placeApi.update(editingPlace.id, data);
+    const updated = await placeApi.update(editingPlace.id, data);
     setEditingPlace(null);
-    const newMarkers = await mapApi.getMarkers();
-    setMarkers(newMarkers);
+    setMarkers(prev => prev.map(m => m.id === updated.id ? {
+      id: updated.id,
+      name: updated.name,
+      type: updated.type,
+      latitude: updated.latitude,
+      longitude: updated.longitude,
+      grade: updated.grade,
+    } : m));
   }, [editingPlace, setMarkers]);
 
   const handleDeletePlace = useCallback(async (placeId: number) => {
@@ -168,6 +182,10 @@ export function usePlaceActions({
     setGroupPosition(null);
   }, [setMoveTo]);
 
+  const openPlaceById = useCallback(async (id: number, position: { x: number; y: number }) => {
+    await fetchAndShowPlace(id, position);
+  }, [fetchAndShowPlace]);
+
   return {
     selectedPlace,
     isLoadingPlace,
@@ -191,6 +209,7 @@ export function usePlaceActions({
     handlePreviewRegister,
     handlePreviewClose,
     handleSearchSelect,
+    openPlaceById,
     clearPanels,
     clearDetailPanels,
   };
