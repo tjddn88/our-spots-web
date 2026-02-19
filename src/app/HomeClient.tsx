@@ -130,7 +130,7 @@ function Home() {
       if (cancelled) return;
       if (status === window.kakao.maps.services!.Status.OK && result.length > 0) {
         console.log(`[addr] 주소 찾음: "${addr}" → (${result[0].y}, ${result[0].x})`);
-        setMoveTo({ lat: parseFloat(result[0].y), lng: parseFloat(result[0].x) });
+        setMoveTo({ lat: parseFloat(result[0].y), lng: parseFloat(result[0].x), zoom: MAP_ZOOM.ADDR });
       } else {
         console.warn(`[addr] 주소 못 찾음: "${addr}" (status: ${status})`);
       }

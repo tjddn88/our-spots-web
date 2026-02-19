@@ -170,6 +170,7 @@ export const PANEL_DIMENSIONS = {
 
 export const MAP_ZOOM = {
   DEFAULT: 3,
+  ADDR: 6,
   ON_MOVE: 6,
 } as const;
 
