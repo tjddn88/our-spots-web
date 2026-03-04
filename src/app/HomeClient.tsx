@@ -13,7 +13,7 @@ import LoginModal from '@/components/LoginModal';
 import PlaceListPopup from '@/components/PlaceListPopup';
 import PlacePreviewCard from '@/components/PlacePreviewCard';
 import AboutModal from '@/components/AboutModal';
-import GuestbookModal from '@/components/GuestbookModal';
+import FeedbackModal from '@/components/FeedbackModal';
 import SearchResultsPanel from '@/components/SearchResultsPanel';
 import ToastContainer from '@/components/Toast';
 import ConfirmModal from '@/components/ConfirmModal';
@@ -77,7 +77,7 @@ function Home() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [showAboutBadge, setShowAboutBadge] = useState(false);
-  const [showGuestbook, setShowGuestbook] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
 
   useEffect(() => {
     if (!localStorage.getItem('about-seen')) {
@@ -428,9 +428,9 @@ function Home() {
           )}
         </button>
         <button
-          onClick={() => setShowGuestbook(true)}
+          onClick={() => setShowFeedback(true)}
           className="bg-white/90 backdrop-blur p-2.5 rounded-full shadow-lg hover:bg-white transition-colors"
-          title="방명록"
+          title="피드백"
         >
           <ChatBubbleIcon className="w-5 h-5 text-gray-600" />
         </button>
@@ -448,8 +448,8 @@ function Home() {
       {/* About Modal */}
       <AboutModal isOpen={showAbout} onClose={() => setShowAbout(false)} />
 
-      {/* Guestbook Modal */}
-      <GuestbookModal isOpen={showGuestbook} onClose={() => setShowGuestbook(false)} onToast={showToast} showConfirm={showConfirm} />
+      {/* Feedback Modal */}
+      <FeedbackModal isOpen={showFeedback} onClose={() => setShowFeedback(false)} onToast={showToast} />
 
       {/* Toast */}
       <ToastContainer toasts={toasts} onRemove={removeToast} />

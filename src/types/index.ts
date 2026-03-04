@@ -38,14 +38,6 @@ export interface SearchResultPlace {
   lng: number;
 }
 
-export interface GuestbookMessage {
-  id: number;
-  nickname: string | null;
-  content: string;
-  createdAt: string;
-  deletable: boolean;
-}
-
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;
