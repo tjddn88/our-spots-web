@@ -73,6 +73,19 @@ function Home() {
     setConfirmState({ message, onConfirm, isDestructive });
   }, []);
 
+  // Preview card screen position (computed after map moves)
+  const [previewScreenPosition, setPreviewScreenPosition] = useState<{ x: number; y: number } | null>(null);
+  useEffect(() => {
+    if (!place.previewPlace) {
+      setPreviewScreenPosition(null);
+      return;
+    }
+    // KakaoMap's moveTo useEffect (child) runs before this (parent) useEffect,
+    // so the map has already moved when we compute the screen position here.
+    const pos = mapRef.current?.coordToScreenPosition(place.previewPlace.lat, place.previewPlace.lng) ?? null;
+    setPreviewScreenPosition(pos);
+  }, [place.previewPlace]);
+
   // About modal & refresh state
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
@@ -342,7 +355,7 @@ function Home() {
         <PlacePreviewCard
           name={place.previewPlace.name}
           address={place.previewPlace.address}
-          screenPosition={mapRef.current?.coordToScreenPosition(place.previewPlace.lat, place.previewPlace.lng) ?? null}
+          screenPosition={previewScreenPosition}
           onRegister={place.handlePreviewRegister}
           onClose={place.handlePreviewClose}
         />
